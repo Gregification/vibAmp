@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" name="com.vibrationAmplifyer.greg.vibAmp.AppTest" time="0.07" tests="1" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="21"/>
+    <property name="sun.cpu.isalist" value="amd64"/>
+    <property name="sun.jnu.encoding" value="Cp1252"/>
+    <property name="java.class.path" value="D:\eclipse\vibAmp\target\test-classes;D:\eclipse\vibAmp\target\classes;C:\Users\bucke\.m2\repository\junit\junit\4.11\junit-4.11.jar;C:\Users\bucke\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar;C:\Users\bucke\.m2\repository\org\openpnp\opencv\4.9.0-0\opencv-4.9.0-0.jar;"/>
+    <property name="java.vm.vendor" value="Oracle Corporation"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="user.variant" value=""/>
+    <property name="java.vendor.url" value="https://java.oracle.com/"/>
+    <property name="user.timezone" value="America/Chicago"/>
+    <property name="os.name" value="Windows 10"/>
+    <property name="java.vm.specification.version" value="21"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="US"/>
+    <property name="sun.boot.library.path" value="C:\java21\jdk-21_windows-x64_bin\jdk-21.0.2\bin"/>
+    <property name="sun.java.command" value="C:\Users\bucke\AppData\Local\Temp\surefire9331367230437457750\surefirebooter18145441636954421165.jar C:\Users\bucke\AppData\Local\Temp\surefire9331367230437457750 2024-02-02T13-35-28_550-jvmRun1 surefire13925058579615962164tmp surefire_010397190125067103559tmp"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="D:\eclipse\vibAmp\target\test-classes;D:\eclipse\vibAmp\target\classes;C:\Users\bucke\.m2\repository\junit\junit\4.11\junit-4.11.jar;C:\Users\bucke\.m2\repository\org\hamcrest\hamcrest-core\1.3\hamcrest-core-1.3.jar;C:\Users\bucke\.m2\repository\org\openpnp\opencv\4.9.0-0\opencv-4.9.0-0.jar;"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="C:\Users\bucke"/>
+    <property name="user.language" value="en"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2024-01-16"/>
+    <property name="java.home" value="C:\java21\jdk-21_windows-x64_bin\jdk-21.0.2"/>
+    <property name="file.separator" value="\"/>
+    <property name="basedir" value="D:\eclipse\vibAmp"/>
+    <property name="style.color" value="always"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="surefire.real.class.path" value="C:\Users\bucke\AppData\Local\Temp\surefire9331367230437457750\surefirebooter18145441636954421165.jar"/>
+    <property name="user.script" value=""/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="java.runtime.version" value="21.0.2+13-LTS-58"/>
+    <property name="user.name" value="bucke"/>
+    <property name="stdout.encoding" value="Cp1252"/>
+    <property name="path.separator" value=";"/>
+    <property name="os.version" value="10.0"/>
+    <property name="java.runtime.name" value="Java(TM) SE Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="Java HotSpot(TM) 64-Bit Server VM"/>
+    <property name="localRepository" value="C:\Users\bucke\.m2\repository"/>
+    <property name="java.vendor.url.bug" value="https://bugreport.java.com/bugreport/"/>
+    <property name="java.io.tmpdir" value="C:\Users\bucke\AppData\Local\Temp\"/>
+    <property name="java.version" value="21.0.2"/>
+    <property name="user.dir" value="D:\eclipse\vibAmp"/>
+    <property name="os.arch" value="amd64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="sun.os.patch.level" value=""/>
+    <property name="native.encoding" value="Cp1252"/>
+    <property name="java.library.path" value="C:\java21\jdk-21_windows-x64_bin\jdk-21.0.2\bin;C:\Windows\Sun\Java\bin;C:\Windows\system32;C:\Windows;C:/java21/jdk-21_windows-x64_bin/jdk-21.0.2/bin/server;C:/java21/jdk-21_windows-x64_bin/jdk-21.0.2/bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Microsoft SQL Server\130\Tools\Binn\;C:\Program Files\nodejs\;C:\Program Files\Git\cmd;C:\Program Files\dotnet\;C:\Program Files\PuTTY\;%ANT_HOME%\bin;D:\DBeaver;C:\Program Files\Docker\Docker\resources\bin;C:\Program Files\WireGuard\;D:\maven\apache-maven-3.9.4-bin\apache-maven-3.9.4\bin;C:\java21\jdk-21_windows-x64_bin\jdk-21.0.2\bin;C:\Program Files\PowerShell\7\;C:\Users\bucke\AppData\Local\Microsoft\WindowsApps;C:\Users\bucke\.dotnet\tools;C:\Users\bucke\AppData\Roaming\npm;D:\Microsoft VS Code\bin;C:\apache-ant-1.10.13-bin\apache-ant-1.10.13\bin;C:\Users\bucke\AppData\Local\Programs\GIMP 2\bin;C:\Users\bucke\AppData\Local\GitHubDesktop\bin;D:\msys64\clang64\bin;D:\msys64\usr\bin;;C:\Users\bucke\OneDrive\Desktop;;."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="Cp1252"/>
+    <property name="java.vendor" value="Oracle Corporation"/>
+    <property name="java.vm.version" value="21.0.2+13-LTS-58"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
+    <property name="java.class.version" value="65.0"/>
+  </properties>
+  <testcase name="shouldAnswerWithTrue" classname="com.vibrationAmplifyer.greg.vibAmp.AppTest" time="0.007"/>
+</testsuite>
