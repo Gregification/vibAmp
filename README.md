@@ -1,0 +1,2 @@
+# vibAmp
+OpenCV vibration sensor
