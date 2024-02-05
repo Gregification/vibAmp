@@ -2,9 +2,6 @@ package com.vibrationAmplifyer.greg.vibAmp;
 
 import java.io.IOException;
 
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -12,7 +9,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * JavaFX App
+ * vibAmp JavaFX root
  */
 public class App extends Application {
 
@@ -35,11 +32,11 @@ public class App extends Application {
     }
 
     public static void main(String[] args) {
+    	//prepare JFX and module
         launch();
         
+        //prepare openCV
         nu.pattern.OpenCV.loadLocally();
-        Mat mat = Mat.eye(3, 3, CvType.CV_8UC1);
-        System.out.println("mat = " + mat.dump());
     }
 
 }
