@@ -1,7 +1,7 @@
 module com.vibrationAmplifyer.greg.vibAmp {
     requires transitive javafx.controls;
     requires javafx.fxml;
-	requires opencv;//it'll live
+	requires transitive opencv;//it'll live
 	requires java.desktop;
 
     opens com.vibrationAmplifyer.greg.vibAmp to javafx.fxml;

@@ -3,6 +3,7 @@ package com.vibrationAmplifyer.greg.vibAmp;
 import java.io.IOException;
 
 import javafx.application.Application;
+import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -12,7 +13,6 @@ import javafx.stage.Stage;
  * vibAmp JavaFX root
  */
 public class App extends Application {
-
     private static Scene scene;
 
     @Override
@@ -21,13 +21,19 @@ public class App extends Application {
         stage.setScene(scene);
         stage.show();
     }
-
+    
     static void setRoot(String fxml) throws IOException {
         scene.setRoot(loadFXML(fxml));
     }
 
     private static Parent loadFXML(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
+        
+        switch(fxmlLoader.getController()) {
+        	case vibAmpUIController vac -> vac.setup();
+        	default -> {}
+        }
+        
         return fxmlLoader.load();
     }
 
