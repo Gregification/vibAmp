@@ -16,17 +16,16 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.shape.Circle?>
 
-
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vibrationAmplifyer.greg.vibAmp.vibAmpUIController">
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vibrationAmplifyer.greg.vibAmp.VibAmpController">
    <top>
-      <MenuBar BorderPane.alignment="CENTER">
+      <MenuBar BorderPane.alignment="TOP_CENTER">
         <menus>
           <Menu mnemonicParsing="false" text="Options">
             <items>
                   <MenuItem mnemonicParsing="false" onAction="#startCapture" text="start capture" />
                   <MenuItem mnemonicParsing="false" onAction="#stopCapture" text="stop capture" />
-                  <MenuItem mnemonicParsing="false" onAction="#importVideo" text="import video" />
                   <MenuItem mnemonicParsing="false" onAction="#exportVideo" text="export video (.mp4)" />
                   <MenuItem mnemonicParsing="false" onAction="#switchToMenu" text="main menu" />
               <MenuItem mnemonicParsing="false" onAction="#quit" text="quit" />
@@ -43,7 +42,7 @@
         <items>
           <AnchorPane>
                <children>
-                  <ScrollPane pannable="true">
+                  <ScrollPane pannable="true" prefHeight="356.0" prefWidth="363.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                      <content>
                         <AnchorPane>
                            <children>
@@ -70,24 +69,27 @@
                                                    <children>
                                                       <RadioButton fx:id="captureFile_radio" mnemonicParsing="false" text="file">
                                                          <toggleGroup>
-                                                            <ToggleGroup fx:id="radio_captureSource" />
+                                                            <ToggleGroup fx:id="captureSource_radio" />
                                                          </toggleGroup>
                                                       </RadioButton>
-                                                      <RadioButton fx:id="captureCamera_radio" layoutY="22.0" mnemonicParsing="false" selected="true" text="camera" toggleGroup="$radio_captureSource" />
+                                                      <RadioButton fx:id="captureCamera_radio" layoutY="22.0" mnemonicParsing="false" selected="true" text="camera" toggleGroup="$captureSource_radio" />
                                                    </children>
                                                 </AnchorPane>
                                                 <AnchorPane />
-                                                <TextField layoutX="26.0" layoutY="48.0" promptText="file path or camera#" text="0" />
+                                                <TextField fx:id="captureSource_text" layoutX="26.0" layoutY="48.0" promptText="file path or camera#" text="0" />
                                              </children>
                                           </AnchorPane>
                                     </content>
+                                       <graphic>
+                                          <Circle fx:id="source_status_circle" fill="DODGERBLUE" radius="7.0" stroke="BLACK" strokeType="INSIDE" />
+                                       </graphic>
                                   </TitledPane>
                                   <TitledPane animated="false" text="parameters">
                                     <content>
                                       <AnchorPane>
                                              <children>
-                                                <Spinner fx:id="fps_spinner" layoutX="37.0" layoutY="8.0" />
-                                                <Label layoutX="14.0" layoutY="12.0" text="fps">
+                                                <Spinner fx:id="fps_spinner" layoutX="56.0" layoutY="8.0" />
+                                                <Label layoutY="12.0" text="target Hz">
                                                    <tooltip>
                                                       <Tooltip text="for when using live video capture" />
                                                    </tooltip>

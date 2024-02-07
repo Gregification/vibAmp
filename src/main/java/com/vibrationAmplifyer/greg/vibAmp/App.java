@@ -2,8 +2,9 @@ package com.vibrationAmplifyer.greg.vibAmp;
 
 import java.io.IOException;
 
+import org.opencv.core.Core;
+
 import javafx.application.Application;
-import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -29,20 +30,22 @@ public class App extends Application {
     private static Parent loadFXML(String fxml) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource(fxml + ".fxml"));
         
-        switch(fxmlLoader.getController()) {
-        	case vibAmpUIController vac -> vac.setup();
-        	default -> {}
-        }
+        Parent ret = fxmlLoader.load();
         
-        return fxmlLoader.load();
+        switch(fxmlLoader.getController()) {
+	    	case VibAmpController vac -> vac.setup();
+	    	default -> {}
+	    }
+        
+        return ret;
     }
 
     public static void main(String[] args) {
-    	//prepare JFX and module
+    	//link OpenCV libraries
+    	System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+    	
+    	//prepare JFX and module    	
         launch();
-        
-        //prepare openCV
-        nu.pattern.OpenCV.loadLocally();
     }
 
 }
