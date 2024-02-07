@@ -55,15 +55,15 @@
             </AnchorPane>
           <AnchorPane>
                <children>
-                  <ScrollPane pannable="true" prefHeight="385.0" prefWidth="237.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                  <ScrollPane fitToWidth="true" pannable="true" prefHeight="385.0" prefWidth="224.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                     <content>
                       <AnchorPane>
                            <children>
-                              <Accordion AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                              <Accordion prefHeight="226.0" prefWidth="235.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                 <panes>
                                   <TitledPane fx:id="source_bellow" animated="false" text="source">
                                     <content>
-                                      <AnchorPane>
+                                      <AnchorPane prefHeight="126.0" prefWidth="233.0">
                                              <children>
                                                 <AnchorPane>
                                                    <children>
@@ -77,7 +77,7 @@
                                                 </AnchorPane>
                                                 <AnchorPane />
                                                 <TextField fx:id="captureSource_text" layoutX="26.0" layoutY="48.0" promptText="file path or camera#" text="0" />
-                                                <Label alignment="TOP_LEFT" layoutX="8.0" layoutY="77.0" prefHeight="78.0" prefWidth="205.0" text="if the source immidealy closes it may be that file/camera is already occupied. try restarting the device manager (idk linux equivalent)." wrapText="true" />
+                                                <Label alignment="TOP_LEFT" layoutX="8.0" layoutY="77.0" prefHeight="93.0" prefWidth="205.0" text="if the source immidealy closes it may be that file/camera is already occupied. try restarting the device with &quot;device manager&quot; (idk linux equivalent)." wrapText="true" />
                                              </children>
                                           </AnchorPane>
                                     </content>

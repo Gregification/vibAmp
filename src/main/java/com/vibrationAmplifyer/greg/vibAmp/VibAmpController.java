@@ -130,7 +130,7 @@ public class VibAmpController implements Runnable{
     @FXML
     public void stopCapture() {
     	workThread.interrupt();
-    	if(capture != null) capture.release();
+    	capture.release();
     }
     
     @FXML
