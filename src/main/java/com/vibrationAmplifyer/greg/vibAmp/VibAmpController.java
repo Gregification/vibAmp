@@ -52,23 +52,21 @@ public class VibAmpController implements Runnable{
 	private Label sourceInfo;
 	
 	@Override public void run() {
-		Mat frame = new Mat();
-		MatOfByte buffer = new MatOfByte();
-		
 		Platform.runLater(() -> {
 			source_status_circle.setFill(Color.GREEN);
 		});
 		
-		//camera warm up buffer
+		//camera warm up buffer time
 		try { Thread.sleep(100);
-		} catch (InterruptedException e) { 
-			JOptionPane.showMessageDialog(null, "process appears to have shutdown early. this may be a issue with the hardware");
-		}
+		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
 		
-		System.out.println("staring process");
+		Mat frame = new Mat();
+		MatOfByte buffer = new MatOfByte();
+		
 		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(frame)) {
-			
 			Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);
+			
+			
 			
 			//display image
 			Imgcodecs.imencode(".png", frame, buffer);
@@ -77,7 +75,6 @@ public class VibAmpController implements Runnable{
 				primaryImage.setImage(display);
 			});
 		}
-		System.out.println("process has ended");
 		
 		Platform.runLater(() -> {
 			source_status_circle.setFill(Color.RED);
@@ -86,20 +83,19 @@ public class VibAmpController implements Runnable{
 	
     @FXML
     private void switchToMenu() throws IOException {
+    	stopCapture();
         App.setRoot(Pages.primary.toString());
     }
     
     @FXML
     private void quit() {
-    	if(capture != null) capture.release();
+    	stopCapture();
     	
     	System.exit(0);
     }
     
     @FXML
     private void startCapture() {
-    	System.out.println("start capture : start");
-    	
     	if(captureSource_radio.getSelectedToggle().toString().contains("camera")) { //not the best but this project isn't that complex	    	    		 
 	   		 
     		int camNum;
@@ -122,7 +118,6 @@ public class VibAmpController implements Runnable{
 //	   		System.out.println("start capture : capture is opened, fps:" + sourceFps);
 //	   		setTargetHz(sourceFps);
 	   	}
-	   	System.out.println("start capture : end");
 	   	
 	   	if(!workThread.isAlive())
 	   		workThread.start();
