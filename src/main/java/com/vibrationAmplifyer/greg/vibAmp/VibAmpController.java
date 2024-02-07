@@ -119,8 +119,9 @@ public class VibAmpController implements Runnable{
 //	   		setTargetHz(sourceFps);
 	   	}
 	   	
-	   	if(!workThread.isAlive())
-	   		workThread.start();
+	   	workThread.interrupt();
+	   	workThread = new Thread(this);
+	   	workThread.start();
     }
     
     /**
@@ -131,6 +132,7 @@ public class VibAmpController implements Runnable{
     public void stopCapture() {
     	workThread.interrupt();
     	capture.release();
+    	capture = new VideoCapture();
     }
     
     @FXML
