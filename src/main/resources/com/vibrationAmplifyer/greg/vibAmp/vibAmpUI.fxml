@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Accordion?>
+<?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
@@ -17,7 +18,6 @@
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.Tooltip?>
-<?import javafx.scene.effect.Glow?>
 <?import javafx.scene.effect.Light.Distant?>
 <?import javafx.scene.effect.Lighting?>
 <?import javafx.scene.effect.Shadow?>
@@ -162,40 +162,19 @@
                                                          </effect>
                                                       </Separator>
                                                       <ToggleButton mnemonicParsing="false" onAction="#toggleInverseDFTMask" text="invert DFT mask" />
-                                                      <HBox layoutX="10.0" layoutY="52.0">
-                                                         <children>
-                                                            <RadioButton mnemonicParsing="false" text="N">
-                                                               <toggleGroup>
-                                                                  <ToggleGroup fx:id="DFTMaskVert_radio" />
-                                                               </toggleGroup>
-                                                               <HBox.margin>
-                                                                  <Insets right="10.0" />
-                                                               </HBox.margin>
-                                                            </RadioButton>
-                                                            <RadioButton layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="S" toggleGroup="$DFTMaskVert_radio">
-                                                               <HBox.margin>
-                                                                  <Insets right="10.0" />
-                                                               </HBox.margin>
-                                                            </RadioButton>
-                                                            <RadioButton layoutX="40.0" layoutY="10.0" mnemonicParsing="false" text="E">
-                                                               <toggleGroup>
-                                                                  <ToggleGroup fx:id="DFTMaskHorz_radio" />
-                                                               </toggleGroup>
-                                                               <HBox.margin>
-                                                                  <Insets right="10.0" />
-                                                               </HBox.margin>
-                                                            </RadioButton>
-                                                            <RadioButton layoutX="70.0" layoutY="10.0" mnemonicParsing="false" text="W" toggleGroup="$DFTMaskHorz_radio">
-                                                               <HBox.margin>
-                                                                  <Insets right="10.0" />
-                                                               </HBox.margin>
-                                                            </RadioButton>
-                                                         </children>
-                                                         <effect>
-                                                            <Glow />
-                                                         </effect>
-                                                      </HBox>
-                                                      <Slider />
+                                                      <ChoiceBox fx:id="DFTMask_choiceBox" onMouseMoved="#onDFTMask_choiceBox_change">
+                                                      	
+													            <!-- <String fx:value="N" />
+													            <String fx:value="S" />
+													            <String fx:value="E" />
+													            <String fx:value="W" />
+													            <String fx:value="NE" />
+													            <String fx:value="NW" />
+													            <String fx:value="SE" />
+													            <String fx:value="SW" /> -->
+													    
+                                                      </ChoiceBox> 
+                                                      <Slider fx:id="DFTMaskSlider" onDragDone="#onDFTMask_slider_change" onInputMethodTextChanged="#onDFTMask_slider_change" />
                                                    </children>
                                                 </VBox>
                                              </children>

@@ -20,7 +20,10 @@ import org.opencv.videoio.VideoCapture;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
@@ -43,18 +46,29 @@ public class VibAmpController implements Runnable{
 	 */
 	int targetHz;
 	
+	static final int	//keep in this order
+		DFTMask_N 	= 0,
+		DFTMask_S 	= 1,
+		DFTMask_E 	= 2,
+		DFTMask_W 	= 3,
+		DFTMask_NE 	= 4,
+		DFTMask_NW 	= 5,
+		DFTMask_SE 	= 6,
+		DFTMask_SW 	= 7;
+		
+	
 	volatile float 
 		effHz = targetHz;
+	volatile float[] maskParamNormals = new float[8];
 	volatile boolean useInverseDFTMask = false;
 	Thread workThread = new Thread(this);
 	
 	public VideoCapture capture;
 	
 	@FXML
-	private ToggleGroup 
-		captureSource_radio,
-		DFTMaskVert_radio,
-		DFTMaskHorz_radio;
+	private ToggleGroup captureSource_radio;
+	@FXML
+	private ChoiceBox<String> DFTMask_choiceBox;
 	@FXML
 	private ImageView
 		primaryImage,
@@ -229,17 +243,15 @@ public class VibAmpController implements Runnable{
         
     	setHz(30);
     	
+    	DFTMask_choiceBox.itemsProperty().set(FXCollections.observableArrayList("N", "S", "E", "W", "NE", "NW", "SE", "SW"));
+    	DFTMask_choiceBox.onActionProperty().addListener((ob,o,n) -> onDFTMask_choiceBox_change());
+    	DFTMaskSlider.valueProperty().addListener((obs, newVal, oldVal) -> onDFTMask_slider_change());
+    	DFTMask_choiceBox.getSelectionModel().select(0);
+    	
     	captureSource_radio.selectedToggleProperty().addListener(new ChangeListener<Toggle>(){
     	    public void changed(ObservableValue<? extends Toggle> ov,
     	            Toggle old_toggle, Toggle new_toggle) {
 	    	    	startCapture();
-    	    	}
-    	    });
-    	
-    	DFTMaskVert_radio.selectedToggleProperty().addListener(new ChangeListener<Toggle>(){
-    	    public void changed(ObservableValue<? extends Toggle> ov,
-    	            Toggle old_toggle, Toggle new_toggle) {
-	    	    	
     	    	}
     	    });
     	
@@ -277,5 +289,18 @@ public class VibAmpController implements Runnable{
     @FXML
     private void toggleInverseDFTMask() {
     	useInverseDFTMask = !useInverseDFTMask;
+    }
+    
+    @FXML
+    private void onDFTMask_choiceBox_change() {
+    	float normal = maskParamNormals[DFTMask_choiceBox.getSelectionModel().getSelectedIndex()];
+    	
+    	DFTMaskSlider.setValue(normal * 100);
+    }
+    
+    @FXML 
+    private void onDFTMask_slider_change() {
+    	float normal = (float)(DFTMaskSlider.getValue() / 100f);
+    	maskParamNormals[DFTMask_choiceBox.getSelectionModel().getSelectedIndex()] = normal;
     }
 }
