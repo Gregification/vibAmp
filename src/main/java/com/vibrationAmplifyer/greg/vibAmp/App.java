@@ -32,11 +32,6 @@ public class App extends Application {
         
         Parent ret = fxmlLoader.load();
         
-        switch(fxmlLoader.getController()) {
-	    	case VibAmpController vac -> vac.setup();
-	    	default -> {}
-	    }
-        
         return ret;
     }
 
