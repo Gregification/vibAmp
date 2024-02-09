@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.JOptionPane;
 
@@ -11,8 +13,11 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
@@ -21,7 +26,6 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
@@ -55,12 +59,12 @@ public class VibAmpController implements Runnable{
 		DFTMask_NW 	= 5,
 		DFTMask_SE 	= 6,
 		DFTMask_SW 	= 7;
-		
+	volatile boolean maskChanged = true;
 	
 	volatile float 
 		effHz = targetHz;
 	volatile float[] maskParamNormals = new float[8];
-	volatile boolean useInverseDFTMask = false;
+	volatile boolean invertDFTMask = true;
 	Thread workThread = new Thread(this);
 	
 	public VideoCapture capture;
@@ -99,8 +103,11 @@ public class VibAmpController implements Runnable{
 		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
 		
 		Mat 
-			frame = new Mat(),
-			freqImg = new Mat();
+			frame = new Mat(), freqImg = new Mat(), freqMask = null;
+		
+//		capture.read(frame);
+//		freqImg = new Mat(Core.getOptimalDFTSize(frame.rows()), Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
+		
 		final List<Pair<Mat, ImageView>> displayMap = List.of(
 				new Pair<>(frame, primaryImage),
 				new Pair<>(freqImg, frequencyImage));
@@ -108,8 +115,7 @@ public class VibAmpController implements Runnable{
 		List<Mat> complexfreqImgLayers = new ArrayList<>(2);
 		
 		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(frame)) {
-			Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);
-			
+			Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);			
 			//apply DFT
 			
 			//pad image for better preformance
@@ -121,13 +127,14 @@ public class VibAmpController implements Runnable{
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
+//			frame.copyTo(freqImg.submat(0, frame.rows(), 0, frame.cols()));
 			//add extra dimension
 			freqImg.convertTo(freqImg, CvType.CV_32F);
 			Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)), freqImg);
 			
 			//apply and get result
 			
-			if(useInverseDFTMask) {
+			if(invertDFTMask) {
 				Core.idft(freqImg, freqImg);
 				Core.split(freqImg, complexfreqImgLayers);
 				
@@ -163,21 +170,77 @@ public class VibAmpController implements Runnable{
 				
 				Core.normalize(freqImg, freqImg, 0, 255, Core.NORM_MINMAX);
 			}
-
+			
+			if(maskChanged || freqMask == null || !freqMask.size().equals(freqImg.size())) {
+				freqMask = makeMask(freqImg.size());
+				maskChanged = false;
+			}
+			freqImg.setTo(new Scalar(0), freqMask);
+			
 			//display images
 			for(var pair : displayMap) {
 				MatOfByte buffer = new MatOfByte();
 				Imgcodecs.imencode(".png", pair.getKey(), buffer);
 				Image display = new Image(new ByteArrayInputStream(buffer.toArray()));
-				Platform.runLater(() -> {
-					pair.getValue().setImage(display);
-				});
-			}			
+				Platform.runLater(() -> pair.getValue().setImage(display));
+			}
+			
+			//testing
+			try { Thread.sleep(50);//20fps
+			} catch (InterruptedException e) {}
 		}
 		
 		Platform.runLater(() -> {
 			source_status_circle.setFill(Color.RED);
 		});
+	}
+	
+	private Mat makeMask(Size size) {
+		//limits
+		Mat mask;
+		Scalar fillVal;
+		
+		if(invertDFTMask) {
+			mask = Mat.ones(size, CvType.CV_8U);
+			fillVal = new Scalar(0);
+		} else {
+			mask = Mat.zeros(size, CvType.CV_8U);
+			fillVal = new Scalar(1);
+		}
+		
+		final double wi = size.width, hi = size.height, w2 = wi/2, h2 = hi/2;
+		final double cc = w2*w2 + h2*h2, thetaRad = Math.atan(h2/w2),//for first quadrant
+				sin = Math.sin(thetaRad), cos = Math.cos(thetaRad);
+		final double //length of diagonal
+			nel = Math.sqrt(cc * maskParamNormals[DFTMask_NE]),
+			nwl = Math.sqrt(cc * maskParamNormals[DFTMask_NW]),
+			sel = Math.sqrt(cc * maskParamNormals[DFTMask_SE]),
+			swl = Math.sqrt(cc * maskParamNormals[DFTMask_SW]);
+		final Point//ocv point, not java library
+			n = new Point(w2, 	(1 - maskParamNormals[DFTMask_N]) * h2),
+			s = new Point(w2, 	maskParamNormals[DFTMask_S] * h2 + h2),
+			e = new Point(maskParamNormals[DFTMask_E] * w2 + w2, 	h2),
+			w = new Point((1 - maskParamNormals[DFTMask_W]) * w2, 	h2),
+			ne = new Point(cos*nel + w2, h2 - sin*nel),
+			nw = new Point(w2 - cos*nwl, h2 - sin*nwl),
+			se = new Point(cos*sel + w2, sin*sel + h2),
+			sw = new Point(w2 - cos*swl, sin*swl + h2),
+			cen= new Point(w2, h2);//center point
+		
+		//there is no overlap between areas so concurrency is a option
+		try(ExecutorService service = Executors.newVirtualThreadPerTaskExecutor()){
+			//each quadrant has upper and lower fill area
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, n, ne)), fillVal)); //1 up
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, e, ne)), fillVal)); //1 down
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, n, nw)), fillVal)); //2 up
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, w, nw)), fillVal)); //2 down
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, w, sw)), fillVal)); //3 up
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, s, sw)), fillVal)); //3 down
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, e, se)), fillVal)); //4 up
+			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, s, se)), fillVal)); //4 down
+		}
+		
+		return mask;
 	}
 	
     @FXML
@@ -195,24 +258,35 @@ public class VibAmpController implements Runnable{
     
     @FXML
     private void startCapture() {
-    	if(captureSource_radio.getSelectedToggle().toString().contains("camera")) { //not the best but this project isn't that complex	    	    		 
-	   		 
-    		int camNum;
-				try { camNum = Integer.parseInt(captureSource_text.getText());
-				} catch (NumberFormatException e) { camNum = 0; }
-	   		sourceInfo.setText("camera#: " + camNum);
-	   		
-	   		capture.open(camNum);
-	   	}
-	   	else {
-	   		var text = captureSource_text.getText();
-	   		sourceInfo.setText("path: " + text);
-	   		
-	   		capture.open(text);
-	   	}
-	   	
-	   	workThread.interrupt();
-	   	workThread = new Thread(this);
+    	//debug
+//    	workThread = new Thread(()->{
+//    		while(!Thread.currentThread().isInterrupted()) {
+//    			Mat mask = makeMask(new Size(30,40));
+//    			System.out.println("\n\n\n\n\n\n" + mask.dump().replace(",", "").replace(";", "").replace("0", ".").replace("1", "@"));
+//    			
+//    			try { Thread.sleep(250);
+//				} catch (InterruptedException e) { e.printStackTrace(); }
+//    		}
+//    	});
+    	
+		if(captureSource_radio.getSelectedToggle().toString().contains("camera")) { //not the best but this project isn't that complex	    	    		 
+		
+		int camNum;
+		try { camNum = Integer.parseInt(captureSource_text.getText());
+		} catch (NumberFormatException e) { camNum = 0; }
+			sourceInfo.setText("camera#: " + camNum);
+			
+			capture.open(camNum);
+		}
+		else {
+			var text = captureSource_text.getText();
+			sourceInfo.setText("path: " + text);
+		
+			capture.open(text);
+		}
+
+		workThread.interrupt();
+		workThread = new Thread(this);//let interrupt clean it-slef up. go gc go
 	   	workThread.start();
     }
     
@@ -287,8 +361,9 @@ public class VibAmpController implements Runnable{
     }
     
     @FXML
-    private void toggleInverseDFTMask() {
-    	useInverseDFTMask = !useInverseDFTMask;
+    private void toggleInvertDFTMask() {
+    	invertDFTMask = !invertDFTMask;
+    	maskChanged = true;
     }
     
     @FXML
@@ -300,6 +375,7 @@ public class VibAmpController implements Runnable{
     
     @FXML 
     private void onDFTMask_slider_change() {
+    	maskChanged = true;
     	float normal = (float)(DFTMaskSlider.getValue() / 100f);
     	maskParamNormals[DFTMask_choiceBox.getSelectionModel().getSelectedIndex()] = normal;
     }

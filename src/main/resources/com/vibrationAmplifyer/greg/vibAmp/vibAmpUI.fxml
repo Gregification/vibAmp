@@ -31,7 +31,7 @@
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="429.0" prefWidth="791.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vibrationAmplifyer.greg.vibAmp.VibAmpController">
    <top>
-      <MenuBar prefHeight="1.0" prefWidth="585.0" BorderPane.alignment="TOP_CENTER">
+      <MenuBar BorderPane.alignment="TOP_CENTER">
         <menus>
           <Menu mnemonicParsing="false" text="Options">
             <items>
@@ -161,7 +161,7 @@
                                                             </Lighting>
                                                          </effect>
                                                       </Separator>
-                                                      <ToggleButton mnemonicParsing="false" onAction="#toggleInverseDFTMask" text="invert DFT mask" />
+                                                      <ToggleButton mnemonicParsing="false" onAction="#toggleInvertDFTMask" text="invert DFT mask" />
                                                       <ChoiceBox fx:id="DFTMask_choiceBox" onMouseMoved="#onDFTMask_choiceBox_change">
                                                       	
 													            <!-- <String fx:value="N" />
