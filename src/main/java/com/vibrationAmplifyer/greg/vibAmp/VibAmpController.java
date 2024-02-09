@@ -59,12 +59,14 @@ public class VibAmpController implements Runnable{
 		DFTMask_NW 	= 5,
 		DFTMask_SE 	= 6,
 		DFTMask_SW 	= 7;
-	volatile boolean maskChanged = true;
+	volatile boolean 
+		maskChanged = true,
+		centerDFTMask = false;
 	
 	volatile float 
 		effHz = targetHz;
 	volatile float[] maskParamNormals = new float[8];
-	volatile boolean invertDFTMask = true;
+	volatile boolean invertDFTMask = false;
 	Thread workThread = new Thread(this);
 	
 	public VideoCapture capture;
@@ -77,6 +79,7 @@ public class VibAmpController implements Runnable{
 	private ImageView
 		primaryImage,
 		frequencyImage,
+		contureImage,
 		finalImage;
 	@FXML
 	private Slider 
@@ -103,13 +106,17 @@ public class VibAmpController implements Runnable{
 		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
 		
 		Mat 
-			frame = new Mat(), freqImg = new Mat(), freqMask = null;
+			frame 		= new Mat(),
+			freqImg 	= new Mat(),
+			contureImg 	= new Mat(),
+			freqMask 	= null;
 		
 //		capture.read(frame);
 //		freqImg = new Mat(Core.getOptimalDFTSize(frame.rows()), Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
 		
 		final List<Pair<Mat, ImageView>> displayMap = List.of(
 				new Pair<>(frame, primaryImage),
+				new Pair<>(contureImg, contureImage),
 				new Pair<>(freqImg, frequencyImage));
 		
 		List<Mat> complexfreqImgLayers = new ArrayList<>(2);
@@ -132,50 +139,37 @@ public class VibAmpController implements Runnable{
 			freqImg.convertTo(freqImg, CvType.CV_32F);
 			Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)), freqImg);
 			
-			//apply and get result
-			
-			if(invertDFTMask) {
-				Core.idft(freqImg, freqImg);
-				Core.split(freqImg, complexfreqImgLayers);
-				
-				Core.normalize(complexfreqImgLayers.get(0), freqImg, 0, 255, Core.NORM_MINMAX);
-			}else {
+			//get DFT
+			{
 				Core.dft(freqImg, freqImg);
 				Core.split(freqImg, complexfreqImgLayers);
+				
 				//combine real and imaginary
 				Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1), freqImg);
 				
 				//scale to something reasonable to display
 				Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqImg, freqImg);
 				Core.log(freqImg, freqImg);
-				
-				//rearrange quadrants
-				freqImg.submat(new Rect(0,0, freqImg.cols() & -2, freqImg.rows() & -2));
-				int cx = freqImg.cols() / 2;
-				int cy = freqImg.rows() / 2;
-	
-				Mat q0 = new Mat(freqImg, new Rect(0, 0, cx, cy));
-				Mat q1 = new Mat(freqImg, new Rect(cx, 0, cx, cy));
-				Mat q2 = new Mat(freqImg, new Rect(0, cy, cx, cy));
-				Mat q3 = new Mat(freqImg, new Rect(cx, cy, cx, cy));
-	
-				Mat tmp = new Mat();
-				q0.copyTo(tmp);
-				q3.copyTo(q0);
-				tmp.copyTo(q3);
-	
-				q1.copyTo(tmp);
-				q2.copyTo(q1);
-				tmp.copyTo(q2);
-				
 				Core.normalize(freqImg, freqImg, 0, 255, Core.NORM_MINMAX);
 			}
 			
-			if(maskChanged || freqMask == null || !freqMask.size().equals(freqImg.size())) {
-				freqMask = makeMask(freqImg.size());
-				maskChanged = false;
+			//mask DFT
+			{
+				if(centerDFTMask) mirrorDTFMat(freqImg);
+					
+				if(maskChanged || freqMask == null || !freqMask.size().equals(freqImg.size())) {
+					freqMask = makeMask(freqImg.size());
+					maskChanged = false;
+				}
+				freqImg.setTo(new Scalar(0), freqMask);
+				
+				if(centerDFTMask) mirrorDTFMat(freqImg);
 			}
-			freqImg.setTo(new Scalar(0), freqMask);
+			
+			//reverse DFT
+			{
+				Core.idft(freqImg, contureImg);
+			}
 			
 			//display images
 			for(var pair : displayMap) {
@@ -209,13 +203,17 @@ public class VibAmpController implements Runnable{
 		}
 		
 		final double wi = size.width, hi = size.height, w2 = wi/2, h2 = hi/2;
-		final double cc = w2*w2 + h2*h2, thetaRad = Math.atan(h2/w2),//for first quadrant
+		final double cc = w2*w2 + h2*h2, c = Math.sqrt(cc), thetaRad = Math.atan(h2/w2),//for first quadrant
 				sin = Math.sin(thetaRad), cos = Math.cos(thetaRad);
 		final double //length of diagonal
-			nel = Math.sqrt(cc * maskParamNormals[DFTMask_NE]),
-			nwl = Math.sqrt(cc * maskParamNormals[DFTMask_NW]),
-			sel = Math.sqrt(cc * maskParamNormals[DFTMask_SE]),
-			swl = Math.sqrt(cc * maskParamNormals[DFTMask_SW]);
+//			nel = Math.sqrt(cc * maskParamNormals[DFTMask_NE]),
+//			nwl = Math.sqrt(cc * maskParamNormals[DFTMask_NW]),
+//			sel = Math.sqrt(cc * maskParamNormals[DFTMask_SE]),
+//			swl = Math.sqrt(cc * maskParamNormals[DFTMask_SW]);
+			nel = c * maskParamNormals[DFTMask_NE],
+			nwl = c * maskParamNormals[DFTMask_NW],
+			sel = c * maskParamNormals[DFTMask_SE],
+			swl = c * maskParamNormals[DFTMask_SW];
 		final Point//ocv point, not java library
 			n = new Point(w2, 	(1 - maskParamNormals[DFTMask_N]) * h2),
 			s = new Point(w2, 	maskParamNormals[DFTMask_S] * h2 + h2),
@@ -306,6 +304,27 @@ public class VibAmpController implements Runnable{
     	
     }
     
+    //swaps the quadrants. running this twice will return the original mat
+    private void mirrorDTFMat(Mat mat) {
+    	mat.submat(new Rect(0,0, mat.cols() & -2, mat.rows() & -2));
+		int cx = mat.cols() / 2;
+		int cy = mat.rows() / 2;
+
+		Mat q0 = new Mat(mat, new Rect(0, 0, cx, cy));
+		Mat q1 = new Mat(mat, new Rect(cx, 0, cx, cy));
+		Mat q2 = new Mat(mat, new Rect(0, cy, cx, cy));
+		Mat q3 = new Mat(mat, new Rect(cx, cy, cx, cy));
+
+		Mat tmp = new Mat();
+		q0.copyTo(tmp);
+		q3.copyTo(q0);
+		tmp.copyTo(q3);
+
+		q1.copyTo(tmp);
+		q2.copyTo(q1);
+		tmp.copyTo(q2);
+    }
+    
     /**
      * init gui listeners and such
      */
@@ -317,7 +336,7 @@ public class VibAmpController implements Runnable{
         
     	setHz(30);
     	
-    	DFTMask_choiceBox.itemsProperty().set(FXCollections.observableArrayList("N", "S", "E", "W", "NE", "NW", "SE", "SW"));
+    	DFTMask_choiceBox.itemsProperty().set(FXCollections.observableArrayList("N", "S", "E", "W", "NE", "NW", "SE", "SW", "circle", "square"));
     	DFTMask_choiceBox.onActionProperty().addListener((ob,o,n) -> onDFTMask_choiceBox_change());
     	DFTMaskSlider.valueProperty().addListener((obs, newVal, oldVal) -> onDFTMask_slider_change());
     	DFTMask_choiceBox.getSelectionModel().select(0);
@@ -367,16 +386,42 @@ public class VibAmpController implements Runnable{
     }
     
     @FXML
+    private void toggleCenterDFTMask() {
+    	centerDFTMask = !centerDFTMask;
+    }
+    
+    @FXML
     private void onDFTMask_choiceBox_change() {
-    	float normal = maskParamNormals[DFTMask_choiceBox.getSelectionModel().getSelectedIndex()];
-    	
-    	DFTMaskSlider.setValue(normal * 100);
+    	int idx = DFTMask_choiceBox.getSelectionModel().getSelectedIndex();
+    	if(idx < maskParamNormals.length) {
+    		float normal = maskParamNormals[idx];
+    		DFTMaskSlider.setValue(normal * 100);
+    	}
     }
     
     @FXML 
     private void onDFTMask_slider_change() {
-    	maskChanged = true;
     	float normal = (float)(DFTMaskSlider.getValue() / 100f);
-    	maskParamNormals[DFTMask_choiceBox.getSelectionModel().getSelectedIndex()] = normal;
+    	int idx = DFTMask_choiceBox.getSelectionModel().getSelectedIndex();
+    	if(idx < maskParamNormals.length) {
+    		maskParamNormals[idx] = normal;
+    	}else switch(idx - maskParamNormals.length) {
+    		case 0 -> {//circle
+    				//cannot make a proper circle without calculating form actual aspect ratio. assuming is 1:1
+    				double r = Math.sqrt(2) / 2; //ratio
+    				
+    				for(int i = 0; i < maskParamNormals.length; i++) maskParamNormals[i]= normal;
+    				
+    				for(var i : new int[] {DFTMask_NE,DFTMask_NW,DFTMask_SE,DFTMask_SW})
+    					maskParamNormals[i] *= normal;
+    			}
+    		case 1 -> {//square
+    				for(int i = 0; i < maskParamNormals.length; i++)
+    					maskParamNormals[i] = normal;
+    			}
+    		default -> throw new UnsupportedOperationException("unknown mask option index:" + idx + " effective:" + (maskParamNormals.length - idx) + " name:" + DFTMask_choiceBox.getSelectionModel().getSelectedItem());
+    	}
+    	
+    	maskChanged = true;
     }
 }

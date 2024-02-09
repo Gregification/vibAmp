@@ -60,8 +60,9 @@
                               <TilePane layoutX="-14.0" layoutY="14.0" prefHeight="14.0" prefWidth="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                  <children>
                                     <ImageView fx:id="primaryImage" pickOnBounds="true" preserveRatio="true" />
-                                    <ImageView fx:id="frequencyImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
                                     <ImageView fx:id="finalImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="frequencyImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="contureImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
                                  </children>
                               </TilePane>
                            </children>
@@ -161,8 +162,9 @@
                                                             </Lighting>
                                                          </effect>
                                                       </Separator>
-                                                      <ToggleButton mnemonicParsing="false" onAction="#toggleInvertDFTMask" text="invert DFT mask" />
-                                                      <ChoiceBox fx:id="DFTMask_choiceBox" onMouseMoved="#onDFTMask_choiceBox_change">
+                                                      <HBox>
+                                                         <children>
+                                                            <ChoiceBox fx:id="DFTMask_choiceBox" onMouseMoved="#onDFTMask_choiceBox_change">
                                                       	
 													            <!-- <String fx:value="N" />
 													            <String fx:value="S" />
@@ -173,7 +175,11 @@
 													            <String fx:value="SE" />
 													            <String fx:value="SW" /> -->
 													    
-                                                      </ChoiceBox> 
+                                                      </ChoiceBox>
+                                                            <ToggleButton mnemonicParsing="false" onAction="#toggleInvertDFTMask" text="invert DFT mask" />
+                                                            <ToggleButton layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#toggleCenterDFTMask" text="center Mask" />
+                                                         </children>
+                                                      </HBox> 
                                                       <Slider fx:id="DFTMaskSlider" onDragDone="#onDFTMask_slider_change" onInputMethodTextChanged="#onDFTMask_slider_change" />
                                                    </children>
                                                 </VBox>
