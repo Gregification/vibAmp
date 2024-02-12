@@ -63,6 +63,7 @@
                                     <ImageView fx:id="finalImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
                                     <ImageView fx:id="frequencyImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
                                     <ImageView fx:id="contureImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="imaginaryImg" pickOnBounds="true" preserveRatio="true" />
                                  </children>
                               </TilePane>
                            </children>

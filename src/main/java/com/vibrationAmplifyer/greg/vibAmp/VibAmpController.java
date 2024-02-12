@@ -80,6 +80,7 @@ public class VibAmpController implements Runnable{
 		primaryImage,
 		frequencyImage,
 		contureImage,
+		imaginaryImg,
 		finalImage;
 	@FXML
 	private Slider 
@@ -110,6 +111,7 @@ public class VibAmpController implements Runnable{
 			freqImg 	= new Mat(),
 			freqMagImg 	= new Mat(),
 			contureImg 	= new Mat(),
+			imagiImg	= new Mat(),
 			freqMask 	= null;
 		
 		capture.read(frame);
@@ -120,6 +122,7 @@ public class VibAmpController implements Runnable{
 		final List<Pair<Mat, ImageView>> displayMap = List.of(
 				new Pair<>(frame, primaryImage),
 				new Pair<>(freqMagImg, frequencyImage),
+				new Pair<>(imagiImg, imaginaryImg),
 				new Pair<>(contureImg, contureImage));
 		
 		List<Mat> complexfreqImgLayers = new ArrayList<>(2);
@@ -134,7 +137,7 @@ public class VibAmpController implements Runnable{
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
-			//get DFT
+			//DFT
 			{
 				//add extra dimension
 				freqImg.convertTo(freqImg, CvType.CV_32F);
@@ -174,11 +177,12 @@ public class VibAmpController implements Runnable{
 				}
 			}
 			
-			//reverse DFT
+			//inverse DFT
 			{
 				Core.idft(freqImg, freqImg, Core.DFT_COMPLEX_INPUT);
 				Core.split(freqImg, complexfreqImgLayers);
 				Core.normalize(complexfreqImgLayers.get(0), contureImg, 0, 255, Core.NORM_MINMAX);
+				Core.normalize(complexfreqImgLayers.get(1), imagiImg, 0, 255, Core.NORM_MINMAX);
 			}
 			
 			//display images
