@@ -49,7 +49,7 @@
       <Label fx:id="sourceInfo" prefHeight="17.0" prefWidth="597.0" text="source" BorderPane.alignment="CENTER" />
    </bottom>
    <center>
-      <SplitPane dividerPositions="0.7123745819397993" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+      <SplitPane dividerPositions="0.6577946768060836" prefHeight="160.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
           <AnchorPane>
                <children>
@@ -59,11 +59,11 @@
                            <children>
                               <TilePane layoutX="-14.0" layoutY="14.0" prefHeight="14.0" prefWidth="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                  <children>
-                                    <ImageView fx:id="primaryImage" pickOnBounds="true" preserveRatio="true" />
-                                    <ImageView fx:id="finalImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
-                                    <ImageView fx:id="frequencyImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
-                                    <ImageView fx:id="contureImage" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
-                                    <ImageView fx:id="imaginaryImg" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="Image1" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="Image2" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="Image3" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="Image4" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
+                                    <ImageView fx:id="Image5" layoutX="10.0" layoutY="10.0" pickOnBounds="true" preserveRatio="true" />
                                  </children>
                               </TilePane>
                            </children>
@@ -146,7 +146,7 @@
                                                             <TextField fx:id="o_effectiveHz_text" editable="false" />
                                                          </children>
                                                       </HBox>
-                                                      <Label text="Object detecteion">
+                                                      <Label text="DFT mask">
                                                          <VBox.margin>
                                                             <Insets top="5.0" />
                                                          </VBox.margin>
@@ -182,6 +182,20 @@
                                                          </children>
                                                       </HBox> 
                                                       <Slider fx:id="DFTMaskSlider" onDragDone="#onDFTMask_slider_change" onInputMethodTextChanged="#onDFTMask_slider_change" />
+                                                      <HBox layoutX="10.0" layoutY="102.0">
+                                                         <children>
+                                                            <Label text="dft min" />
+                                                            <Label fx:id="o_dftMin_text" layoutX="10.0" layoutY="10.0" text="0" />
+                                                         </children>
+                                                      </HBox>
+                                                      <Slider fx:id="DFTMin_slider" />
+                                                      <HBox layoutX="10.0" layoutY="141.0">
+                                                         <children>
+                                                            <Label text="dft max" />
+                                                            <Label fx:id="o_dftMax_text" layoutX="10.0" layoutY="10.0" text="0" />
+                                                         </children>
+                                                      </HBox>
+                                                      <Slider fx:id="DFTMax_slider" />
                                                    </children>
                                                 </VBox>
                                              </children>

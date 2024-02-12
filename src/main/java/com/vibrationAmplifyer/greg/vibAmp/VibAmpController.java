@@ -4,8 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 
 import javax.swing.JOptionPane;
 
@@ -39,7 +41,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.util.Pair;
 
 public class VibAmpController implements Runnable{
 	public static final int //arbitrarly defined
@@ -63,8 +64,10 @@ public class VibAmpController implements Runnable{
 		maskChanged = true,
 		centerDFTMask = false;
 	
-	volatile float 
-		effHz = targetHz;
+	volatile double 
+		effHz = targetHz,
+		DFTMask_min = 0,
+		DFTMask_max = 1;
 	volatile float[] maskParamNormals = new float[8];
 	volatile boolean invertDFTMask = false;
 	Thread workThread = new Thread(this);
@@ -77,15 +80,17 @@ public class VibAmpController implements Runnable{
 	private ChoiceBox<String> DFTMask_choiceBox;
 	@FXML
 	private ImageView
-		primaryImage,
-		frequencyImage,
-		contureImage,
-		imaginaryImg,
-		finalImage;
+		Image1,
+		Image2,
+		Image3,
+		Image4,
+		Image5;
 	@FXML
 	private Slider 
 		targetHzScaler,
-		DFTMaskSlider;
+		DFTMaskSlider,
+		DFTMin_slider,
+		DFTMax_slider;
 	@FXML
 	private Spinner<Integer> targetHzRaw_spinner;
 	@FXML
@@ -95,112 +100,173 @@ public class VibAmpController implements Runnable{
 	@FXML
 	private Circle source_status_circle;
 	@FXML
-	private Label sourceInfo;
+	private Label sourceInfo,
+		o_dftMin_text,
+		o_dftMax_text;
 	
-	@Override public void run() {
-		Platform.runLater(() -> {
-			source_status_circle.setFill(Color.GREEN);
-		});
-		
-		//camera warm up buffer time
-		try { Thread.sleep(100);
-		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
-		
+	/*
+	 * @Override public void run() { Platform.runLater(() -> {
+	 * source_status_circle.setFill(Color.GREEN); });
+	 * 
+	 * //camera warm up buffer time try { Thread.sleep(100); } catch
+	 * (InterruptedException e) { JOptionPane.showMessageDialog(null,
+	 * "process appears to have shutdown early"); }
+	 * 
+	 * Mat frame = new Mat(), freqImg = new Mat(), freqMagImg = new Mat(),
+	 * contureImg = new Mat(), imagiImg = new Mat(), freqMask = null;
+	 * 
+	 * capture.read(frame); int addPixelRows = Core.getOptimalDFTSize(frame.rows());
+	 * int addPixelCols = Core.getOptimalDFTSize(frame.cols()); // freqImg = new
+	 * Mat(Core.getOptimalDFTSize(frame.rows()),
+	 * Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
+	 * 
+	 * final List<Pair<Mat, ImageView>> displayMap = List.of( new Pair<>(frame,
+	 * primaryImage), new Pair<>(freqMagImg, frequencyImage), new Pair<>(imagiImg,
+	 * imaginaryImg), new Pair<>(contureImg, contureImage));
+	 * 
+	 * List<Mat> complexfreqImgLayers = new ArrayList<>(2);
+	 * 
+	 * while(!Thread.currentThread().isInterrupted() && capture.isOpened() &&
+	 * capture.read(frame)) { Imgproc.cvtColor(frame, frame,
+	 * Imgproc.COLOR_BGR2GRAY);
+	 * 
+	 * //pad & copy image Core.copyMakeBorder(frame, freqImg, 0, addPixelRows -
+	 * frame.rows(), 0, addPixelCols - frame.cols(), Core.BORDER_CONSTANT,
+	 * Scalar.all(0));
+	 * 
+	 * //DFT { //add extra dimension freqImg.convertTo(freqImg, CvType.CV_32F);
+	 * Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)),
+	 * freqImg);
+	 * 
+	 * Core.dft(freqImg, freqImg, Core.DFT_COMPLEX_OUTPUT);
+	 * 
+	 * Core.split(freqImg, complexfreqImgLayers);
+	 * 
+	 * }
+	 * 
+	 * //get display of mask { //combine real and imaginary
+	 * Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1),
+	 * freqMagImg);
+	 * 
+	 * //scale down Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqMagImg,
+	 * freqMagImg); Core.log(freqMagImg, freqMagImg); // Core.multiply(freqImg, new
+	 * Scalar(20), freqMagImg); Core.normalize(freqMagImg, freqMagImg, 0, 255,
+	 * Core.NORM_MINMAX); }
+	 * 
+	 * //apply mask to actual and display images { if(maskChanged || freqMask ==
+	 * null || !freqMask.size().equals(freqImg.size())) { freqMask =
+	 * makeMask(freqImg.size()); maskChanged = false; }
+	 * 
+	 * for(Mat mat : new Mat[]{freqMagImg, freqImg}) { if(centerDFTMask)
+	 * mirrorDTFMat(mat);
+	 * 
+	 * mat.setTo(new Scalar(0), freqMask);
+	 * 
+	 * if(centerDFTMask) mirrorDTFMat(mat);
+	 * 
+	 * Imgproc.threshold(mat, mat, DFTMask_min, DFTMask_max * 255,
+	 * Imgproc.THRESH_TRUNC); } }
+	 * 
+	 * //inverse DFT { Core.idft(freqImg, freqImg, Core.DFT_COMPLEX_INPUT);
+	 * Core.split(freqImg, complexfreqImgLayers);
+	 * Core.normalize(complexfreqImgLayers.get(0), contureImg, 0, 255,
+	 * Core.NORM_MINMAX); Core.normalize(complexfreqImgLayers.get(1), imagiImg, 0,
+	 * 255, Core.NORM_MINMAX); }
+	 * 
+	 * //display images for(var pair : displayMap) { MatOfByte buffer = new
+	 * MatOfByte(); Imgcodecs.imencode(".png", pair.getKey(), buffer); Image display
+	 * = new Image(new ByteArrayInputStream(buffer.toArray())); Platform.runLater(()
+	 * -> pair.getValue().setImage(display)); }
+	 * 
+	 * //testing try { Thread.sleep(50);//20fps } catch (InterruptedException e) {}
+	 * }
+	 * 
+	 * Platform.runLater(() -> { source_status_circle.setFill(Color.RED); }); }
+	 */
+
+	
+	public void mainLoop() {
 		Mat 
-			frame 		= new Mat(),
-			freqImg 	= new Mat(),
-			freqMagImg 	= new Mat(),
+			src		= new Mat(),
+			dft			= new Mat(),
+			dftMag		= new Mat(),
 			contureImg 	= new Mat(),
-			imagiImg	= new Mat(),
-			freqMask 	= null;
+			dftMask 	= null;
 		
-		capture.read(frame);
-		int addPixelRows = Core.getOptimalDFTSize(frame.rows());
-		int addPixelCols = Core.getOptimalDFTSize(frame.cols());
-//		freqImg = new Mat(Core.getOptimalDFTSize(frame.rows()), Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
+		capture.read(src);
+		int addPixelRows = Core.getOptimalDFTSize(src.rows());
+		int addPixelCols = Core.getOptimalDFTSize(src.cols());
 		
-		final List<Pair<Mat, ImageView>> displayMap = List.of(
-				new Pair<>(frame, primaryImage),
-				new Pair<>(freqMagImg, frequencyImage),
-				new Pair<>(imagiImg, imaginaryImg),
-				new Pair<>(contureImg, contureImage));
+		BiConsumer<Mat, ImageView> drawImg = (mat, img) -> {
+			MatOfByte buffer = new MatOfByte();
+			Imgcodecs.imencode(".png", mat, buffer); 
+			Image display = new Image(new ByteArrayInputStream(buffer.toArray()));
+			Platform.runLater(() -> img.setImage(display));
+		};
 		
-		List<Mat> complexfreqImgLayers = new ArrayList<>(2);
-		
-		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(frame)) {
-			Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);			
+		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(src)) {
+			drawImg.accept(src, Image1);
+			Imgproc.cvtColor(src, src, Imgproc.COLOR_BGR2YUV);
 			
-			//pad & copy image 
-			Core.copyMakeBorder(frame, freqImg,
-					0, addPixelRows - frame.rows(),
-					0, addPixelCols - frame.cols(),
+			//get rid of high frequency changes though down sampling
+			{	
+				int l = 2;
+				for(int i = 0; i < l; i++)
+					Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
+				
+				for(int i = 0; i < l; i++)
+					Imgproc.pyrUp(src, src, new Size( src.cols()*2, src.rows()*2));
+			}
+			
+			Core.copyMakeBorder(src, src,
+					0, addPixelRows - src.rows(),
+					0, addPixelCols - src.cols(),
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
-			//DFT
+			//DFT and masks
 			{
-				//add extra dimension
-				freqImg.convertTo(freqImg, CvType.CV_32F);
-				Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)), freqImg);
+				Imgproc.cvtColor(src, dft, Imgproc.COLOR_YUV2RGB);
+				Imgproc.cvtColor(dft, dft, Imgproc.COLOR_RGB2GRAY);
+				dft.convertTo(dft, CvType.CV_32F);
+				Core.merge(List.of(dft, Mat.zeros(dft.size(), CvType.CV_32F)), dft);
+				Core.dft(dft, dft);
 				
-				Core.dft(freqImg, freqImg, Core.DFT_COMPLEX_OUTPUT);
+				List<Mat> layers = new ArrayList<>();
+				Core.split(dft, layers);
 				
-				Core.split(freqImg, complexfreqImgLayers);
-			
-			}
-			
-			//get display of mask
-			{
-				//combine real and imaginary
-				Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1), freqMagImg);
+				Core.magnitude(layers.get(0), layers.get(1), dftMag);
+				Core.log(dftMag, dftMag);
+				Core.normalize(dftMag, dftMag, 0, 255, Core.NORM_MINMAX);
 				
-				//scale down
-				Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqMagImg, freqMagImg);
-				Core.log(freqMagImg, freqMagImg);
-//				Core.multiply(freqImg, new Scalar(20), freqMagImg);
-				Core.normalize(freqMagImg, freqMagImg, 0, 255, Core.NORM_MINMAX);
-			}
-			
-			//apply mask to actual and display images
-			{
-				if(maskChanged || freqMask == null || !freqMask.size().equals(freqImg.size())) {
-					freqMask = makeMask(freqImg.size());
+				//update mask
+				if(maskChanged || dftMask == null || !dftMask.size().equals(src.size())) {
+					dftMask = makeMask(src.size());
 					maskChanged = false;
 				}
 				
-				for(Mat mat : new Mat[]{freqMagImg, freqImg}) {
-					if(centerDFTMask) mirrorDTFMat(mat);
-					
-					mat.setTo(new Scalar(0), freqMask);
-					
-					if(centerDFTMask) mirrorDTFMat(mat);
+				//apply mask
+				if(centerDFTMask) {
+					mirrorDTFMat(dftMag);
+					mirrorDTFMat(dft);
+				}
+				
+				dft.setTo(new Scalar(0), dftMask);
+				Imgproc.threshold(dft, dft, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_TRUNC);
+
+				dftMag.setTo(new Scalar(0), dftMask);
+				Imgproc.threshold(dftMag, dftMag, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_TRUNC);
+				drawImg.accept(dftMag, Image3);
+				
+				if(centerDFTMask) {
+//					mirrorDTFMat(dftMag);//only for visual display so no reason to keep this
+					mirrorDTFMat(dft);
 				}
 			}
 			
-			//inverse DFT
-			{
-				Core.idft(freqImg, freqImg, Core.DFT_COMPLEX_INPUT);
-				Core.split(freqImg, complexfreqImgLayers);
-				Core.normalize(complexfreqImgLayers.get(0), contureImg, 0, 255, Core.NORM_MINMAX);
-				Core.normalize(complexfreqImgLayers.get(1), imagiImg, 0, 255, Core.NORM_MINMAX);
-			}
-			
-			//display images
-			for(var pair : displayMap) {
-				MatOfByte buffer = new MatOfByte();
-				Imgcodecs.imencode(".png", pair.getKey(), buffer); 
-				Image display = new Image(new ByteArrayInputStream(buffer.toArray()));
-				Platform.runLater(() -> pair.getValue().setImage(display));
-			}
-			
-			//testing
-			try { Thread.sleep(50);//20fps
-			} catch (InterruptedException e) {}
+			drawImg.accept(src, Image2);
+//			drawImg.accept(dft, Image4);
 		}
-		
-		Platform.runLater(() -> {
-			source_status_circle.setFill(Color.RED);
-		});
 	}
 	
 	private Mat makeMask(Size size) {
@@ -341,6 +407,10 @@ public class VibAmpController implements Runnable{
     	DFTMaskSlider.valueProperty().addListener((obs, newVal, oldVal) -> onDFTMask_slider_change());
     	DFTMask_choiceBox.getSelectionModel().select(0);
     	
+    	DFTMax_slider.valueProperty().addListener((obs, newVal, oldVal) -> onDFTMaskMaxChange_slider());
+    		DFTMax_slider.setValue(100.0);
+    	DFTMin_slider.valueProperty().addListener((obs, newVal, oldVal) -> onDFTMaskMinChange_slider());
+    		DFTMin_slider.setValue(0.0);
     	captureSource_radio.selectedToggleProperty().addListener(new ChangeListener<Toggle>(){
     	    public void changed(ObservableValue<? extends Toggle> ov,
     	            Toggle old_toggle, Toggle new_toggle) {
@@ -361,6 +431,9 @@ public class VibAmpController implements Runnable{
         });
     	
     	source_status_circle.setFill(Color.ORANGE);
+    	
+    	startCapture();
+    	
     }
     
     public int getHz() {
@@ -424,4 +497,30 @@ public class VibAmpController implements Runnable{
     	
     	maskChanged = true;
     }
+    
+    private void onDFTMaskMaxChange_slider() {
+    	DFTMask_max = DFTMax_slider.getValue() / 100;
+    	o_dftMax_text.setText(DFTMask_max + "");
+    }
+    
+    private void onDFTMaskMinChange_slider() { 
+    	DFTMask_min = DFTMin_slider.getValue() / 100;
+    	o_dftMin_text.setText(DFTMask_min + "");
+    }
+    
+    @Override public void run() {
+		Platform.runLater(() -> {
+			source_status_circle.setFill(Color.GREEN);
+		});
+		
+		//camera warm up buffer time
+		try { Thread.sleep(100);
+		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
+		
+		mainLoop();
+		
+		Platform.runLater(() -> {
+			source_status_circle.setFill(Color.RED);
+		});
+	}
 }
