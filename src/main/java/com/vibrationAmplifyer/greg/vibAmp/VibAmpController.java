@@ -108,73 +108,83 @@ public class VibAmpController implements Runnable{
 		Mat 
 			frame 		= new Mat(),
 			freqImg 	= new Mat(),
+			freqMagImg 	= new Mat(),
 			contureImg 	= new Mat(),
 			freqMask 	= null;
 		
-//		capture.read(frame);
+		capture.read(frame);
+		int addPixelRows = Core.getOptimalDFTSize(frame.rows());
+		int addPixelCols = Core.getOptimalDFTSize(frame.cols());
 //		freqImg = new Mat(Core.getOptimalDFTSize(frame.rows()), Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
 		
 		final List<Pair<Mat, ImageView>> displayMap = List.of(
 				new Pair<>(frame, primaryImage),
-				new Pair<>(contureImg, contureImage),
-				new Pair<>(freqImg, frequencyImage));
+				new Pair<>(freqMagImg, frequencyImage),
+				new Pair<>(contureImg, contureImage));
 		
 		List<Mat> complexfreqImgLayers = new ArrayList<>(2);
 		
 		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(frame)) {
 			Imgproc.cvtColor(frame, frame, Imgproc.COLOR_BGR2GRAY);			
-			//apply DFT
 			
-			//pad image for better preformance
-			int addPixelRows = Core.getOptimalDFTSize(frame.rows());
-			int addPixelCols = Core.getOptimalDFTSize(frame.cols());
+			//pad & copy image 
 			Core.copyMakeBorder(frame, freqImg,
 					0, addPixelRows - frame.rows(),
 					0, addPixelCols - frame.cols(),
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
-//			frame.copyTo(freqImg.submat(0, frame.rows(), 0, frame.cols()));
-			//add extra dimension
-			freqImg.convertTo(freqImg, CvType.CV_32F);
-			Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)), freqImg);
-			
 			//get DFT
 			{
-				Core.dft(freqImg, freqImg);
+				//add extra dimension
+				freqImg.convertTo(freqImg, CvType.CV_32F);
+				Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)), freqImg);
+				
+				Core.dft(freqImg, freqImg, Core.DFT_COMPLEX_OUTPUT);
+				
 				Core.split(freqImg, complexfreqImgLayers);
-				
-				//combine real and imaginary
-				Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1), freqImg);
-				
-				//scale to something reasonable to display
-				Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqImg, freqImg);
-				Core.log(freqImg, freqImg);
-				Core.normalize(freqImg, freqImg, 0, 255, Core.NORM_MINMAX);
+			
 			}
 			
-			//mask DFT
+			//get display of mask
 			{
-				if(centerDFTMask) mirrorDTFMat(freqImg);
-					
+				//combine real and imaginary
+				Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1), freqMagImg);
+				
+				//scale down
+				Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqMagImg, freqMagImg);
+				Core.log(freqMagImg, freqMagImg);
+//				Core.multiply(freqImg, new Scalar(20), freqMagImg);
+				Core.normalize(freqMagImg, freqMagImg, 0, 255, Core.NORM_MINMAX);
+			}
+			
+			//apply mask to actual and display images
+			{
 				if(maskChanged || freqMask == null || !freqMask.size().equals(freqImg.size())) {
 					freqMask = makeMask(freqImg.size());
 					maskChanged = false;
 				}
-				freqImg.setTo(new Scalar(0), freqMask);
 				
-				if(centerDFTMask) mirrorDTFMat(freqImg);
+				for(Mat mat : new Mat[]{freqMagImg, freqImg}) {
+					if(centerDFTMask) mirrorDTFMat(mat);
+					
+					mat.setTo(new Scalar(0), freqMask);
+					
+					if(centerDFTMask) mirrorDTFMat(mat);
+				}
 			}
 			
 			//reverse DFT
 			{
-				Core.idft(freqImg, contureImg);
+				Core.idft(freqImg, freqImg, Core.DFT_COMPLEX_INPUT);
+				Core.split(freqImg, complexfreqImgLayers);
+				Core.normalize(complexfreqImgLayers.get(0), contureImg, 0, 255, Core.NORM_MINMAX);
 			}
 			
 			//display images
 			for(var pair : displayMap) {
 				MatOfByte buffer = new MatOfByte();
-				Imgcodecs.imencode(".png", pair.getKey(), buffer);
+				Imgcodecs.imencode(".png", pair.getKey(), buffer); 
 				Image display = new Image(new ByteArrayInputStream(buffer.toArray()));
 				Platform.runLater(() -> pair.getValue().setImage(display));
 			}
@@ -206,10 +216,6 @@ public class VibAmpController implements Runnable{
 		final double cc = w2*w2 + h2*h2, c = Math.sqrt(cc), thetaRad = Math.atan(h2/w2),//for first quadrant
 				sin = Math.sin(thetaRad), cos = Math.cos(thetaRad);
 		final double //length of diagonal
-//			nel = Math.sqrt(cc * maskParamNormals[DFTMask_NE]),
-//			nwl = Math.sqrt(cc * maskParamNormals[DFTMask_NW]),
-//			sel = Math.sqrt(cc * maskParamNormals[DFTMask_SE]),
-//			swl = Math.sqrt(cc * maskParamNormals[DFTMask_SW]);
 			nel = c * maskParamNormals[DFTMask_NE],
 			nwl = c * maskParamNormals[DFTMask_NW],
 			sel = c * maskParamNormals[DFTMask_SE],
@@ -256,16 +262,6 @@ public class VibAmpController implements Runnable{
     
     @FXML
     private void startCapture() {
-    	//debug
-//    	workThread = new Thread(()->{
-//    		while(!Thread.currentThread().isInterrupted()) {
-//    			Mat mask = makeMask(new Size(30,40));
-//    			System.out.println("\n\n\n\n\n\n" + mask.dump().replace(",", "").replace(";", "").replace("0", ".").replace("1", "@"));
-//    			
-//    			try { Thread.sleep(250);
-//				} catch (InterruptedException e) { e.printStackTrace(); }
-//    		}
-//    	});
     	
 		if(captureSource_radio.getSelectedToggle().toString().contains("camera")) { //not the best but this project isn't that complex	    	    		 
 		
@@ -304,7 +300,7 @@ public class VibAmpController implements Runnable{
     	
     }
     
-    //swaps the quadrants. running this twice will return the original mat
+    //swaps diagonal quadrants. running this twice will return the original mat
     private void mirrorDTFMat(Mat mat) {
     	mat.submat(new Rect(0,0, mat.cols() & -2, mat.rows() & -2));
 		int cx = mat.cols() / 2;
