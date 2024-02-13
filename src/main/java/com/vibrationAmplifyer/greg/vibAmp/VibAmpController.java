@@ -62,7 +62,8 @@ public class VibAmpController implements Runnable{
 		DFTMask_SW 	= 7;
 	volatile boolean 
 		maskChanged = true,
-		centerDFTMask = false;
+		centerDFTMask = false,
+		normalizeDFT = true;
 	
 	volatile double 
 		effHz = targetHz,
@@ -205,8 +206,8 @@ public class VibAmpController implements Runnable{
 		};
 		
 		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(src)) {
-			drawImg.accept(src, Image1);
 			Imgproc.cvtColor(src, src, Imgproc.COLOR_BGR2YUV);
+			drawImg.accept(src, Image1);
 			
 			//get rid of high frequency changes though down sampling
 			{	
@@ -233,7 +234,7 @@ public class VibAmpController implements Runnable{
 				Core.dft(dft, dft);
 				
 				List<Mat> layers = new ArrayList<>();
-				Core.split(dft, layers);
+				Core.split(dft, layers);	
 				
 				Core.magnitude(layers.get(0), layers.get(1), dftMag);
 				Core.log(dftMag, dftMag);
@@ -246,26 +247,28 @@ public class VibAmpController implements Runnable{
 				}
 				
 				//apply mask
-				if(centerDFTMask) {
-					mirrorDTFMat(dftMag);
-					mirrorDTFMat(dft);
+				for(Mat mat : new Mat[]{dft, dftMag}) {
+					if(centerDFTMask) mirrorDTFMat(mat);
+					
+					mat.setTo(new Scalar(0), dftMask);
+					
+					if(centerDFTMask) mirrorDTFMat(mat);
 				}
 				
-				dft.setTo(new Scalar(0), dftMask);
-				Imgproc.threshold(dft, dft, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_TRUNC);
-
-				dftMag.setTo(new Scalar(0), dftMask);
-				Imgproc.threshold(dftMag, dftMag, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_TRUNC);
+				Imgproc.threshold(dftMag, dftMag, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_BINARY);
 				drawImg.accept(dftMag, Image3);
 				
-				if(centerDFTMask) {
-//					mirrorDTFMat(dftMag);//only for visual display so no reason to keep this
-					mirrorDTFMat(dft);
-				}
+				dftMag.convertTo(dftMag, CvType.CV_8U);
+				dft.setTo(new Scalar(0), dftMag);
+				
+				Core.idft(dft, dft);
+				Core.split(dft, layers);
+				
+				if(normalizeDFT)
+					Core.normalize(layers.get(0), dft, 0, 255, Core.NORM_MINMAX);
+				
+				drawImg.accept(layers.get(0), Image2);
 			}
-			
-			drawImg.accept(src, Image2);
-//			drawImg.accept(dft, Image4);
 		}
 	}
 	
@@ -301,7 +304,7 @@ public class VibAmpController implements Runnable{
 			sw = new Point(w2 - cos*swl, sin*swl + h2),
 			cen= new Point(w2, h2);//center point
 		
-		//there is no overlap between areas so concurrency is a option
+		//little overlap. ocv handles that
 		try(ExecutorService service = Executors.newVirtualThreadPerTaskExecutor()){
 			//each quadrant has upper and lower fill area
 			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, n, ne)), fillVal)); //1 up
@@ -472,6 +475,11 @@ public class VibAmpController implements Runnable{
     	}
     }
     
+    @FXML
+    private void toggleNormalizeDFT() {
+    	normalizeDFT = !normalizeDFT; 
+    }
+    
     @FXML 
     private void onDFTMask_slider_change() {
     	float normal = (float)(DFTMaskSlider.getValue() / 100f);
@@ -501,11 +509,13 @@ public class VibAmpController implements Runnable{
     private void onDFTMaskMaxChange_slider() {
     	DFTMask_max = DFTMax_slider.getValue() / 100;
     	o_dftMax_text.setText(DFTMask_max + "");
+    	maskChanged = true;
     }
     
     private void onDFTMaskMinChange_slider() { 
     	DFTMask_min = DFTMin_slider.getValue() / 100;
     	o_dftMin_text.setText(DFTMask_min + "");
+    	maskChanged = true;
     }
     
     @Override public void run() {

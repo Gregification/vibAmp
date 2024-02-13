@@ -196,6 +196,7 @@
                                                          </children>
                                                       </HBox>
                                                       <Slider fx:id="DFTMax_slider" />
+                                                      <ToggleButton mnemonicParsing="false" onAction="#toggleNormalizeDFT" text="normalize DFT" />
                                                    </children>
                                                 </VBox>
                                              </children>
