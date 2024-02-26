@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Accordion?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
@@ -78,7 +79,7 @@
                     <content>
                       <AnchorPane>
                            <children>
-                              <Accordion prefHeight="226.0" prefWidth="235.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                              <Accordion prefHeight="226.0" prefWidth="235.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" expandedPane="$source_bellow">
                                 <panes>
                                   <TitledPane fx:id="source_bellow" animated="false" text="source">
                                     <content>
@@ -97,6 +98,7 @@
                                                 <AnchorPane />
                                                 <TextField fx:id="captureSource_text" layoutX="26.0" layoutY="48.0" promptText="file path or camera#" text="0" />
                                                 <Label alignment="TOP_LEFT" layoutX="8.0" layoutY="77.0" prefHeight="93.0" prefWidth="205.0" text="if the source immidealy closes it may be that file/camera is already occupied. try restarting the device with &quot;device manager&quot; (idk linux equivalent)." wrapText="true" />
+                                                <Button layoutX="4.0" layoutY="170.0" mnemonicParsing="false" onAction="#toggleCapture" text="Start/Stop Capture" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" />
                                              </children>
                                           </AnchorPane>
                                     </content>

@@ -42,5 +42,4 @@ public class App extends Application {
     	//prepare JFX and module    	
         launch();
     }
-
 }

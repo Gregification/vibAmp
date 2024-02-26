@@ -334,15 +334,15 @@ public class VibAmpController implements Runnable{
     }
     
     @FXML
-    private void startCapture() {
+    private void startCapture() {    	
+    	stopCapture();
     	
 		if(captureSource_radio.getSelectedToggle().toString().contains("camera")) { //not the best but this project isn't that complex	    	    		 
-		
-		int camNum;
-		try { camNum = Integer.parseInt(captureSource_text.getText());
-		} catch (NumberFormatException e) { camNum = 0; }
-			sourceInfo.setText("camera#: " + camNum);
+			int camNum;
+			try { camNum = Integer.parseInt(captureSource_text.getText());
+			} catch (NumberFormatException e) { camNum = 0; }
 			
+			sourceInfo.setText("camera#: " + camNum);
 			capture.open(camNum);
 		}
 		else {
@@ -352,7 +352,7 @@ public class VibAmpController implements Runnable{
 			capture.open(text);
 		}
 
-		workThread.interrupt();
+		workThread.interrupt(); //stop capture should take care of this but just in case.
 		workThread = new Thread(this);//let interrupt clean it-slef up. go gc go
 	   	workThread.start();
     }
@@ -366,6 +366,14 @@ public class VibAmpController implements Runnable{
     	workThread.interrupt();
     	capture.release();
     	capture = new VideoCapture();
+    }
+    
+    @FXML
+    public void toggleCapture() {
+    	if(capture.isOpened())
+    		stopCapture();
+    	else
+    		startCapture();
     }
     
     @FXML
@@ -434,9 +442,6 @@ public class VibAmpController implements Runnable{
         });
     	
     	source_status_circle.setFill(Color.ORANGE);
-    	
-    	startCapture();
-    	
     }
     
     public int getHz() {
@@ -525,7 +530,7 @@ public class VibAmpController implements Runnable{
 		
 		//camera warm up buffer time
 		try { Thread.sleep(100);
-		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "process appears to have shutdown early"); }
+		} catch (InterruptedException e) { JOptionPane.showMessageDialog(null, "video capture process appears to have shutdown early"); }
 		
 		mainLoop();
 		
