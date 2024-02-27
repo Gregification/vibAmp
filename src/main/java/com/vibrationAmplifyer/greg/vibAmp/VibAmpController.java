@@ -255,7 +255,8 @@ public class VibAmpController implements Runnable{
 					if(centerDFTMask) mirrorDTFMat(mat);
 				}
 				
-				Imgproc.threshold(dftMag, dftMag, DFTMask_min * 255, DFTMask_max * 255, Imgproc.THRESH_BINARY);
+				Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
+				
 				drawImg.accept(dftMag, Image3);
 				
 				dftMag.convertTo(dftMag, CvType.CV_8U);
