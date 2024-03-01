@@ -50,6 +50,8 @@ public class VibAmpController implements Runnable{
 	 * what the program is to believe the fps is, this is not necessarly hte fps of the video source
 	 */
 	int targetHz;
+	/** layer count of gussian pyramid */
+	int l = 2;
 	
 	static final int	//keep in this order
 		DFTMask_N 	= 0,
@@ -68,7 +70,9 @@ public class VibAmpController implements Runnable{
 	volatile double 
 		effHz = targetHz,
 		DFTMask_min = 0,
-		DFTMask_max = 1;
+		DFTMask_max = 1,
+		FpAmp		= 1,
+		FpAtt		= 0;
 	volatile float[] maskParamNormals = new float[8];
 	volatile boolean invertDFTMask = false;
 	Thread workThread = new Thread(this);
@@ -91,9 +95,15 @@ public class VibAmpController implements Runnable{
 		targetHzScaler,
 		DFTMaskSlider,
 		DFTMin_slider,
-		DFTMax_slider;
+		DFTMax_slider,
+		FpAmplification_slider,
+		FpAttenuation_slider;
 	@FXML
 	private Spinner<Integer> targetHzRaw_spinner;
+	@FXML
+	private Spinner<Double> 
+		FpAmplification_spinner,	
+		FpAttenuation_spinner;
 	@FXML
 	private TextField 
 		captureSource_text,
@@ -103,97 +113,22 @@ public class VibAmpController implements Runnable{
 	@FXML
 	private Label sourceInfo,
 		o_dftMin_text,
-		o_dftMax_text;
-	
-	/*
-	 * @Override public void run() { Platform.runLater(() -> {
-	 * source_status_circle.setFill(Color.GREEN); });
-	 * 
-	 * //camera warm up buffer time try { Thread.sleep(100); } catch
-	 * (InterruptedException e) { JOptionPane.showMessageDialog(null,
-	 * "process appears to have shutdown early"); }
-	 * 
-	 * Mat frame = new Mat(), freqImg = new Mat(), freqMagImg = new Mat(),
-	 * contureImg = new Mat(), imagiImg = new Mat(), freqMask = null;
-	 * 
-	 * capture.read(frame); int addPixelRows = Core.getOptimalDFTSize(frame.rows());
-	 * int addPixelCols = Core.getOptimalDFTSize(frame.cols()); // freqImg = new
-	 * Mat(Core.getOptimalDFTSize(frame.rows()),
-	 * Core.getOptimalDFTSize(frame.cols()), CvType.CV_32F);
-	 * 
-	 * final List<Pair<Mat, ImageView>> displayMap = List.of( new Pair<>(frame,
-	 * primaryImage), new Pair<>(freqMagImg, frequencyImage), new Pair<>(imagiImg,
-	 * imaginaryImg), new Pair<>(contureImg, contureImage));
-	 * 
-	 * List<Mat> complexfreqImgLayers = new ArrayList<>(2);
-	 * 
-	 * while(!Thread.currentThread().isInterrupted() && capture.isOpened() &&
-	 * capture.read(frame)) { Imgproc.cvtColor(frame, frame,
-	 * Imgproc.COLOR_BGR2GRAY);
-	 * 
-	 * //pad & copy image Core.copyMakeBorder(frame, freqImg, 0, addPixelRows -
-	 * frame.rows(), 0, addPixelCols - frame.cols(), Core.BORDER_CONSTANT,
-	 * Scalar.all(0));
-	 * 
-	 * //DFT { //add extra dimension freqImg.convertTo(freqImg, CvType.CV_32F);
-	 * Core.merge(List.of(freqImg, Mat.zeros(freqImg.size(), CvType.CV_32F)),
-	 * freqImg);
-	 * 
-	 * Core.dft(freqImg, freqImg, Core.DFT_COMPLEX_OUTPUT);
-	 * 
-	 * Core.split(freqImg, complexfreqImgLayers);
-	 * 
-	 * }
-	 * 
-	 * //get display of mask { //combine real and imaginary
-	 * Core.magnitude(complexfreqImgLayers.get(0), complexfreqImgLayers.get(1),
-	 * freqMagImg);
-	 * 
-	 * //scale down Core.add(Mat.ones(freqImg.size(), CvType.CV_32F), freqMagImg,
-	 * freqMagImg); Core.log(freqMagImg, freqMagImg); // Core.multiply(freqImg, new
-	 * Scalar(20), freqMagImg); Core.normalize(freqMagImg, freqMagImg, 0, 255,
-	 * Core.NORM_MINMAX); }
-	 * 
-	 * //apply mask to actual and display images { if(maskChanged || freqMask ==
-	 * null || !freqMask.size().equals(freqImg.size())) { freqMask =
-	 * makeMask(freqImg.size()); maskChanged = false; }
-	 * 
-	 * for(Mat mat : new Mat[]{freqMagImg, freqImg}) { if(centerDFTMask)
-	 * mirrorDTFMat(mat);
-	 * 
-	 * mat.setTo(new Scalar(0), freqMask);
-	 * 
-	 * if(centerDFTMask) mirrorDTFMat(mat);
-	 * 
-	 * Imgproc.threshold(mat, mat, DFTMask_min, DFTMask_max * 255,
-	 * Imgproc.THRESH_TRUNC); } }
-	 * 
-	 * //inverse DFT { Core.idft(freqImg, freqImg, Core.DFT_COMPLEX_INPUT);
-	 * Core.split(freqImg, complexfreqImgLayers);
-	 * Core.normalize(complexfreqImgLayers.get(0), contureImg, 0, 255,
-	 * Core.NORM_MINMAX); Core.normalize(complexfreqImgLayers.get(1), imagiImg, 0,
-	 * 255, Core.NORM_MINMAX); }
-	 * 
-	 * //display images for(var pair : displayMap) { MatOfByte buffer = new
-	 * MatOfByte(); Imgcodecs.imencode(".png", pair.getKey(), buffer); Image display
-	 * = new Image(new ByteArrayInputStream(buffer.toArray())); Platform.runLater(()
-	 * -> pair.getValue().setImage(display)); }
-	 * 
-	 * //testing try { Thread.sleep(50);//20fps } catch (InterruptedException e) {}
-	 * }
-	 * 
-	 * Platform.runLater(() -> { source_status_circle.setFill(Color.RED); }); }
-	 */
-
+		o_dftMax_text,
+		o_FpAmp_text,
+		o_FpAtt_text;
 	
 	public void mainLoop() {
 		Mat 
-			src		= new Mat(),
-			dft			= new Mat(),
-			dftMag		= new Mat(),
-			contureImg 	= new Mat(),
-			dftMask 	= null;
+			src			= new Mat(),
+			matY		= new Mat(),
+			matU		= new Mat(),
+			matV		= new Mat(),
+			dftMag		= new Mat(),	//magnitude
+			dftHardMask 	= null;
 		
+		List<Mat> layers = new ArrayList<>();
+		
+		//get capture dimensions
 		capture.read(src);
 		int addPixelRows = Core.getOptimalDFTSize(src.rows());
 		int addPixelCols = Core.getOptimalDFTSize(src.cols());
@@ -206,18 +141,15 @@ public class VibAmpController implements Runnable{
 		};
 		
 		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(src)) {
-			Imgproc.cvtColor(src, src, Imgproc.COLOR_BGR2YUV);
+			Imgproc.cvtColor(src, src, Imgproc.COLOR_BGR2YUV);//YIQ alternative
 			drawImg.accept(src, Image1);
 			
-			//get rid of high frequency changes though down sampling
-			{	
-				int l = 2;
-				for(int i = 0; i < l; i++)
-					Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
+			//blurring using gaussian pyramids
+			for(int i = 1; i < l; i++)
+				Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
 				
-				for(int i = 0; i < l; i++)
-					Imgproc.pyrUp(src, src, new Size( src.cols()*2, src.rows()*2));
-			}
+			for(int i = 1; i < l; i++)
+				Imgproc.pyrUp(src, src, new Size( src.cols()*2, src.rows()*2));
 			
 			Core.copyMakeBorder(src, src,
 					0, addPixelRows - src.rows(),
@@ -225,50 +157,103 @@ public class VibAmpController implements Runnable{
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
+			Core.split(src, layers);
+			matY = layers.get(0);
+			matY.convertTo(matY,  CvType.CV_32F);
+//			matY = Mat.zeros(src.size(), CvType.CV_32F);
+			matU = layers.get(1);
+			matV = layers.get(2);
+			
 			//DFT and masks
 			{
-				Imgproc.cvtColor(src, dft, Imgproc.COLOR_YUV2RGB);
-				Imgproc.cvtColor(dft, dft, Imgproc.COLOR_RGB2GRAY);
-				dft.convertTo(dft, CvType.CV_32F);
-				Core.merge(List.of(dft, Mat.zeros(dft.size(), CvType.CV_32F)), dft);
-				Core.dft(dft, dft);
-				
-				List<Mat> layers = new ArrayList<>();
-				Core.split(dft, layers);	
-				
-				Core.magnitude(layers.get(0), layers.get(1), dftMag);
-				Core.log(dftMag, dftMag);
-				Core.normalize(dftMag, dftMag, 0, 255, Core.NORM_MINMAX);
-				
 				//update mask
-				if(maskChanged || dftMask == null || !dftMask.size().equals(src.size())) {
-					dftMask = makeMask(src.size());
+				if(maskChanged || dftHardMask == null || !dftHardMask.size().equals(src.size())) {
+					dftHardMask = makeMask(src.size());
 					maskChanged = false;
 				}
 				
-				//apply mask
-				for(Mat mat : new Mat[]{dft, dftMag}) {
-					if(centerDFTMask) mirrorDTFMat(mat);
+				//DFT for U and V layers.
+				for(Mat dftify : List.of(matU, matV)) {
+					dftify.convertTo(dftify, CvType.CV_32F);
 					
-					mat.setTo(new Scalar(0), dftMask);
+					//give imaginary layer
+					Core.merge(List.of(dftify, Mat.zeros(dftify.size(), CvType.CV_32F)), dftify);
 					
-					if(centerDFTMask) mirrorDTFMat(mat);
+					//magic
+					Core.dft(dftify, dftify);
+					
+					//mask frequencies
+					Core.split(dftify, layers);
+					Core.magnitude(layers.get(0), layers.get(1), dftMag);
+					Core.log(dftMag, dftMag);
+					Core.normalize(dftMag, dftMag,0, 255, Core.NORM_MINMAX);
+					dftMag.convertTo(dftMag, CvType.CV_8U);
+					Imgproc.threshold(dftMag, dftMag,  DFTMask_min * 255,  DFTMask_max * 255, Imgproc.THRESH_BINARY);
+//					Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
+					{
+//						var res = Core.minMaxLoc(dftMag);
+//						System.out.println((dftify == matU ? "matU " : "matV ") + "\t max:" + res.maxVal + "\t min:" + res.minVal);
+					}
+					dftify.setTo(new Scalar(0), dftMag);
+					
+					//mask area
+					dftify.setTo(new Scalar(0), dftHardMask);
+//					dftMag.setTo(new Scalar(0), dftHardMask);//display purposes
+					
+					//show magnitude spectrum
+					drawImg.accept(dftMag, dftify == matU ? Image3 
+							: dftify == matY ? Image5
+							: Image4);
+					
+					Core.idft(dftify, dftify);
+					Core.split(dftify, layers);
+					Core.normalize(layers.get(0), dftify, 0, 255, Core.NORM_MINMAX);
 				}
 				
-				Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
-				
-				drawImg.accept(dftMag, Image3);
-				
-				dftMag.convertTo(dftMag, CvType.CV_8U);
-				dft.setTo(new Scalar(0), dftMag);
-				
-				Core.idft(dft, dft);
-				Core.split(dft, layers);
-				
-				if(normalizeDFT)
-					Core.normalize(layers.get(0), dft, 0, 255, Core.NORM_MINMAX);
-				
-				drawImg.accept(layers.get(0), Image2);
+				Core.merge(List.of(matY, matU, matV), src);
+//				Imgproc.cvtColor(src, src, Imgproc.COLOR_YUV2BGR);
+//				Core.split(src, layers);
+//				System.out.println("channels : " + layers.size());
+				drawImg.accept(src, Image2);
+//				drawImg.accept(matU, Image3);
+//				drawImg.accept(matV, Image4);
+//				Imgproc.cvtColor(src, dft, Imgproc.COLOR_YUV2RGB);
+//				Imgproc.cvtColor(dft, dft, Imgproc.COLOR_RGB2GRAY);
+//				dft.convertTo(dft, CvType.CV_32F);
+//				Core.merge(List.of(dft, Mat.zeros(dft.size(), CvType.CV_32F)), dft);
+//				Core.dft(dft, dft);
+//				
+//				Core.split(dft, layers);	
+//				
+//				Core.magnitude(layers.get(0), layers.get(1), dftMag);
+//				Core.log(dftMag, dftMag);
+//				Core.normalize(dftMag, dftMag, 0, 255, Core.NORM_MINMAX);
+//				
+//				//apply mask
+//				for(Mat mat : new Mat[]{dft, dftMag}) {
+//					if(centerDFTMask) mirrorDTFMat(mat);
+//					
+//					mat.setTo(new Scalar(0), dftMask);
+//					
+//					if(centerDFTMask) mirrorDTFMat(mat);
+//				}
+//				
+//				Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
+//				
+//				drawImg.accept(dftMag, Image3);
+//				
+//				//not needed 
+////				dftMag.convertTo(dftMag, CvType.CV_8U);
+//				
+//				dft.setTo(new Scalar(0), dftMag);
+//				
+//				Core.idft(dft, dft);
+//				Core.split(dft, layers);
+//				
+//				if(normalizeDFT)
+//					Core.normalize(layers.get(0), dft, 0, 255, Core.NORM_MINMAX);
+//				
+//				drawImg.accept(layers.get(0), Image2);
 			}
 		}
 	}
@@ -317,6 +302,8 @@ public class VibAmpController implements Runnable{
 			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, e, se)), fillVal)); //4 up
 			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, s, se)), fillVal)); //4 down
 		}
+		
+		if(centerDFTMask) mirrorDTFMat(mask);
 		
 		return mask;
 	}
@@ -442,6 +429,12 @@ public class VibAmpController implements Runnable{
            updateEffectiveHz();
         });
     	
+    	FpAmplification_slider.setValue(50);
+    	FpAmplification_spinner.getValueFactory().setValue(FpAmp);
+    	
+    	FpAttenuation_slider.setValue(50);
+    	FpAttenuation_spinner.getValueFactory().setValue(FpAtt);
+    	
     	source_status_circle.setFill(Color.ORANGE);
     }
     
@@ -453,7 +446,6 @@ public class VibAmpController implements Runnable{
     	o_effectiveHz_text.setText(effHz + "");
     }
     
-    @FXML
     public float setHz(int targetHz) {
     	this.targetHz = targetHz;
     	updateEffectiveHz();
@@ -470,6 +462,7 @@ public class VibAmpController implements Runnable{
     @FXML
     private void toggleCenterDFTMask() {
     	centerDFTMask = !centerDFTMask;
+    	maskChanged = true;
     }
     
     @FXML
@@ -522,6 +515,22 @@ public class VibAmpController implements Runnable{
     	DFTMask_min = DFTMin_slider.getValue() / 100;
     	o_dftMin_text.setText(DFTMask_min + "");
     	maskChanged = true;
+    }
+    
+    @FXML
+    private void onFpAmpChange() {
+    	FpAmp = FpAmplification_slider.getValue() / 100;
+    	FpAmp -= .5f;
+    	FpAmp *= FpAmplification_spinner.valueProperty().getValue();
+    	o_FpAmp_text.setText(FpAmp + "");
+    }
+    
+    @FXML
+    private void onFpAttChange() {
+    	FpAtt = FpAttenuation_slider.getValue() / 100;
+    	FpAtt -= .5f;
+    	FpAtt *= FpAttenuation_spinner.valueProperty().getValue();
+    	o_FpAtt_text.setText(FpAtt + "");
     }
     
     @Override public void run() {

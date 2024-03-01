@@ -29,6 +29,7 @@
 <?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
+<?import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="429.0" prefWidth="791.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vibrationAmplifyer.greg.vibAmp.VibAmpController">
    <top>
@@ -79,7 +80,7 @@
                     <content>
                       <AnchorPane>
                            <children>
-                              <Accordion prefHeight="226.0" prefWidth="235.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" expandedPane="$source_bellow">
+                              <Accordion prefHeight="226.0" prefWidth="235.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                                 <panes>
                                   <TitledPane fx:id="source_bellow" animated="false" text="source">
                                     <content>
@@ -199,6 +200,40 @@
                                                       </HBox>
                                                       <Slider fx:id="DFTMax_slider" />
                                                       <ToggleButton mnemonicParsing="false" onAction="#toggleNormalizeDFT" text="normalize DFT" />
+                                                      <VBox prefHeight="200.0" prefWidth="100.0">
+                                                         <children>
+                                                            <Separator prefWidth="200.0" />
+                                                            <HBox prefHeight="100.0" prefWidth="200.0">
+                                                               <children>
+                                                                  <Label text="amplification" />
+                                                                  <Spinner fx:id="FpAmplification_spinner" editable="true" onKeyReleased="#onFpAmpChange" prefHeight="25.0" prefWidth="93.0">
+                                                                  	<valueFactory>
+														                <SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1"/>
+														            </valueFactory>
+                                                                  </Spinner>
+                                                                  <Label fx:id="o_FpAmp_text" layoutX="10.0" layoutY="10.0" text="0" />
+                                                               </children>
+                                                            </HBox>
+                                                            <Slider fx:id="FpAmplification_slider" onDragDetected="#onFpAmpChange" />
+                                                         </children>
+                                                      </VBox>
+                                                      <VBox layoutX="10.0" layoutY="228.0" prefHeight="200.0" prefWidth="100.0">
+                                                         <children>
+                                                            <Separator prefWidth="200.0" />
+                                                            <HBox prefHeight="100.0" prefWidth="200.0">
+                                                               <children>
+                                                                  <Label text="attenuation" />
+                                                                  <Spinner fx:id="FpAttenuation_spinner" editable="true" onKeyReleased="#onFpAttChange" prefHeight="25.0" prefWidth="93.0">
+																	<valueFactory>
+														            	<SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1"/>
+														            </valueFactory>
+                                                                  </Spinner>
+                                                                  <Label fx:id="o_FpAtt_text" layoutX="10.0" layoutY="10.0" text="0" />
+                                                               </children>
+                                                            </HBox>
+                                                            <Slider fx:id="FpAttenuation_slider" onDragDetected="#onFpAttChange" />
+                                                         </children>
+                                                      </VBox>
                                                    </children>
                                                 </VBox>
                                              </children>
