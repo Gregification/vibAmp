@@ -173,7 +173,7 @@ public class VibAmpController implements Runnable{
 				}
 				
 				//DFT for U and V layers.
-				for(Mat dftify : List.of(matU, matV)) {
+				for(Mat dftify : List.of(matY, matU, matV)) {
 					dftify.convertTo(dftify, CvType.CV_32F);
 					
 					//give imaginary layer
@@ -188,26 +188,24 @@ public class VibAmpController implements Runnable{
 					Core.log(dftMag, dftMag);
 					Core.normalize(dftMag, dftMag,0, 255, Core.NORM_MINMAX);
 					dftMag.convertTo(dftMag, CvType.CV_8U);
-					Imgproc.threshold(dftMag, dftMag,  DFTMask_min * 255,  DFTMask_max * 255, Imgproc.THRESH_BINARY);
-//					Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
-					{
-//						var res = Core.minMaxLoc(dftMag);
-//						System.out.println((dftify == matU ? "matU " : "matV ") + "\t max:" + res.maxVal + "\t min:" + res.minVal);
-					}
+					Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
 					dftify.setTo(new Scalar(0), dftMag);
 					
 					//mask area
 					dftify.setTo(new Scalar(0), dftHardMask);
-//					dftMag.setTo(new Scalar(0), dftHardMask);//display purposes
+					
+					//amplification and attenuation
+					Core.multiply(dftify, new Scalar(FpAmp * (dftify != matY ? FpAtt : 1)), dftify);
 					
 					//show magnitude spectrum
 					drawImg.accept(dftMag, dftify == matU ? Image3 
 							: dftify == matY ? Image5
-							: Image4);
+									: Image4);
 					
 					Core.idft(dftify, dftify);
 					Core.split(dftify, layers);
 					Core.normalize(layers.get(0), dftify, 0, 255, Core.NORM_MINMAX);
+					
 				}
 				
 				Core.merge(List.of(matY, matU, matV), src);
@@ -217,43 +215,6 @@ public class VibAmpController implements Runnable{
 				drawImg.accept(src, Image2);
 //				drawImg.accept(matU, Image3);
 //				drawImg.accept(matV, Image4);
-//				Imgproc.cvtColor(src, dft, Imgproc.COLOR_YUV2RGB);
-//				Imgproc.cvtColor(dft, dft, Imgproc.COLOR_RGB2GRAY);
-//				dft.convertTo(dft, CvType.CV_32F);
-//				Core.merge(List.of(dft, Mat.zeros(dft.size(), CvType.CV_32F)), dft);
-//				Core.dft(dft, dft);
-//				
-//				Core.split(dft, layers);	
-//				
-//				Core.magnitude(layers.get(0), layers.get(1), dftMag);
-//				Core.log(dftMag, dftMag);
-//				Core.normalize(dftMag, dftMag, 0, 255, Core.NORM_MINMAX);
-//				
-//				//apply mask
-//				for(Mat mat : new Mat[]{dft, dftMag}) {
-//					if(centerDFTMask) mirrorDTFMat(mat);
-//					
-//					mat.setTo(new Scalar(0), dftMask);
-//					
-//					if(centerDFTMask) mirrorDTFMat(mat);
-//				}
-//				
-//				Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
-//				
-//				drawImg.accept(dftMag, Image3);
-//				
-//				//not needed 
-////				dftMag.convertTo(dftMag, CvType.CV_8U);
-//				
-//				dft.setTo(new Scalar(0), dftMag);
-//				
-//				Core.idft(dft, dft);
-//				Core.split(dft, layers);
-//				
-//				if(normalizeDFT)
-//					Core.normalize(layers.get(0), dft, 0, 255, Core.NORM_MINMAX);
-//				
-//				drawImg.accept(layers.get(0), Image2);
 			}
 		}
 	}
