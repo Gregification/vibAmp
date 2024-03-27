@@ -13,6 +13,7 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
 <?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TitledPane?>
@@ -29,7 +30,6 @@
 <?import javafx.scene.layout.TilePane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
-<?import javafx.scene.control.SpinnerValueFactory.DoubleSpinnerValueFactory?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="429.0" prefWidth="791.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vibrationAmplifyer.greg.vibAmp.VibAmpController">
    <top>
@@ -115,7 +115,7 @@
                                                    <children>
                                                       <HBox layoutX="10.0" layoutY="125.0">
                                                          <children>
-                                                            <Label text="target Hz">
+                                                            <Label text="pyramid layers">
                                                                <tooltip>
                                                                   <Tooltip text="for when using live video capture" />
                                                                </tooltip>
@@ -126,29 +126,7 @@
                                                             <Spinner fx:id="targetHzRaw_spinner" editable="true" nodeOrientation="RIGHT_TO_LEFT" />
                                                          </children>
                                                       </HBox>
-                                                      <HBox>
-                                                         <children>
-                                                            <Label text="Hz scaler">
-                                                               <tooltip>
-                                                                  <Tooltip text="for when using live video capture" />
-                                                               </tooltip>
-                                                               <HBox.margin>
-                                                                  <Insets right="5.0" />
-                                                               </HBox.margin>
-                                                            </Label>
-                                                            <Slider fx:id="targetHzScaler" />
-                                                         </children>
-                                                      </HBox>
-                                                      <HBox>
-                                                         <children>
-                                                            <Label text="Effective value">
-                                                               <HBox.margin>
-                                                                  <Insets right="5.0" />
-                                                               </HBox.margin>
-                                                            </Label>
-                                                            <TextField fx:id="o_effectiveHz_text" editable="false" />
-                                                         </children>
-                                                      </HBox>
+                                                      <HBox />
                                                       <Label text="DFT mask">
                                                          <VBox.margin>
                                                             <Insets top="5.0" />
@@ -199,7 +177,12 @@
                                                          </children>
                                                       </HBox>
                                                       <Slider fx:id="DFTMax_slider" />
-                                                      <ToggleButton mnemonicParsing="false" onAction="#toggleNormalizeDFT" text="normalize DFT" />
+                                                      <HBox prefHeight="100.0" prefWidth="200.0">
+                                                         <children>
+                                                            <ToggleButton mnemonicParsing="false" onAction="#toggleRGBReversion" text="toggle RBG conversion" />
+                                                            <ToggleButton layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#toggleOverlayOrgionalImage" text="toggle overlay" />
+                                                         </children>
+                                                      </HBox>
                                                       <VBox prefHeight="200.0" prefWidth="100.0">
                                                          <children>
                                                             <Separator prefWidth="200.0" />
@@ -208,13 +191,13 @@
                                                                   <Label text="amplification" />
                                                                   <Spinner fx:id="FpAmplification_spinner" editable="true" onKeyReleased="#onFpAmpChange" prefHeight="25.0" prefWidth="93.0">
                                                                   	<valueFactory>
-														                <SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1"/>
+														                <SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1" />
 														            </valueFactory>
                                                                   </Spinner>
                                                                   <Label fx:id="o_FpAmp_text" layoutX="10.0" layoutY="10.0" text="0" />
                                                                </children>
                                                             </HBox>
-                                                            <Slider fx:id="FpAmplification_slider" onDragDetected="#onFpAmpChange" />
+                                                            <Slider fx:id="FpAmplification_slider" onDragDetected="#onFpAmpChange" onDragExited="#onFpAmpChange" onDragOver="#onFpAmpChange" />
                                                          </children>
                                                       </VBox>
                                                       <VBox layoutX="10.0" layoutY="228.0" prefHeight="200.0" prefWidth="100.0">
@@ -225,13 +208,13 @@
                                                                   <Label text="attenuation" />
                                                                   <Spinner fx:id="FpAttenuation_spinner" editable="true" onKeyReleased="#onFpAttChange" prefHeight="25.0" prefWidth="93.0">
 																	<valueFactory>
-														            	<SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1"/>
+														            	<SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.1" />
 														            </valueFactory>
                                                                   </Spinner>
                                                                   <Label fx:id="o_FpAtt_text" layoutX="10.0" layoutY="10.0" text="0" />
                                                                </children>
                                                             </HBox>
-                                                            <Slider fx:id="FpAttenuation_slider" onDragDetected="#onFpAttChange" />
+                                                            <Slider fx:id="FpAttenuation_slider" onDragDetected="#onFpAttChange" onDragDone="#onFpAttChange" onDragEntered="#onFpAttChange" onDragExited="#onFpAttChange" onDragOver="#onFpAttChange" />
                                                          </children>
                                                       </VBox>
                                                    </children>

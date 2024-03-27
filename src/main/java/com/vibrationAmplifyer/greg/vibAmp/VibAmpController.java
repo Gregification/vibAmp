@@ -41,17 +41,11 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.util.Duration;
 
 public class VibAmpController implements Runnable{
-	public static final int //arbitrarly defined
-		minTargetHz = 1,		
-		maxTargetHz = 1000000;
-	/**
-	 * what the program is to believe the fps is, this is not necessarly hte fps of the video source
-	 */
-	int targetHz;
 	/** layer count of gussian pyramid */
-	int l = 2;
+	volatile int PyrLayers = 3;
 	
 	static final int	//keep in this order
 		DFTMask_N 	= 0,
@@ -65,10 +59,10 @@ public class VibAmpController implements Runnable{
 	volatile boolean 
 		maskChanged = true,
 		centerDFTMask = false,
-		normalizeDFT = true;
+		convertToRGB = false,
+		overlayOrgionalImage = false;
 	
-	volatile double 
-		effHz = targetHz,
+	volatile double
 		DFTMask_min = 0,
 		DFTMask_max = 1,
 		FpAmp		= 1,
@@ -106,8 +100,7 @@ public class VibAmpController implements Runnable{
 		FpAttenuation_spinner;
 	@FXML
 	private TextField 
-		captureSource_text,
-		o_effectiveHz_text;
+		captureSource_text;
 	@FXML
 	private Circle source_status_circle;
 	@FXML
@@ -119,19 +112,20 @@ public class VibAmpController implements Runnable{
 	
 	public void mainLoop() {
 		Mat 
+			raw 		= new Mat(),
 			src			= new Mat(),
-			matY		= new Mat(),
-			matU		= new Mat(),
-			matV		= new Mat(),
+			matY		,
+			matU		,
+			matV		,
 			dftMag		= new Mat(),	//magnitude
-			dftHardMask 	= null;
+			dftHardMask = null;
 		
-		List<Mat> layers = new ArrayList<>();
+		List<Mat> imgLayers = new ArrayList<>();
 		
 		//get capture dimensions
-		capture.read(src);
-		int addPixelRows = Core.getOptimalDFTSize(src.rows());
-		int addPixelCols = Core.getOptimalDFTSize(src.cols());
+		capture.read(raw);
+		int addPixelRows = Core.getOptimalDFTSize(raw.rows());
+		int addPixelCols = Core.getOptimalDFTSize(raw.cols());
 		
 		BiConsumer<Mat, ImageView> drawImg = (mat, img) -> {
 			MatOfByte buffer = new MatOfByte();
@@ -140,15 +134,19 @@ public class VibAmpController implements Runnable{
 			Platform.runLater(() -> img.setImage(display));
 		};
 		
-		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(src)) {
-			Imgproc.cvtColor(src, src, Imgproc.COLOR_BGR2YUV);//YIQ alternative
-			drawImg.accept(src, Image1);
+		while(!Thread.currentThread().isInterrupted() && capture.isOpened() && capture.read(raw)) {
+			raw.convertTo(raw, CvType.CV_32F);
+			drawImg.accept(raw, Image1);
+			
+			Imgproc.cvtColor(raw, raw, Imgproc.COLOR_BGR2YUV);//YIQ alternative
+			raw.copyTo(src);
 			
 			//blurring using gaussian pyramids
-			for(int i = 1; i < l; i++)
+			int p = PyrLayers;
+			for(int i = 0; i < p; i++)
 				Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
 				
-			for(int i = 1; i < l; i++)
+			for(int i = 0; i < p; i++)
 				Imgproc.pyrUp(src, src, new Size( src.cols()*2, src.rows()*2));
 			
 			Core.copyMakeBorder(src, src,
@@ -157,12 +155,10 @@ public class VibAmpController implements Runnable{
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
-			Core.split(src, layers);
-			matY = layers.get(0);
-			matY.convertTo(matY,  CvType.CV_32F);
-//			matY = Mat.zeros(src.size(), CvType.CV_32F);
-			matU = layers.get(1);
-			matV = layers.get(2);
+			Core.split(src, imgLayers);
+			matY = imgLayers.get(0);
+			matU = imgLayers.get(1);
+			matV = imgLayers.get(2);
 			
 			//DFT and masks
 			{
@@ -172,10 +168,8 @@ public class VibAmpController implements Runnable{
 					maskChanged = false;
 				}
 				
-				//DFT for U and V layers.
-				for(Mat dftify : List.of(matY, matU, matV)) {
-					dftify.convertTo(dftify, CvType.CV_32F);
-					
+				//DFT for all layers.
+				for(Mat dftify : List.of(matY, matU, matV)) {					
 					//give imaginary layer
 					Core.merge(List.of(dftify, Mat.zeros(dftify.size(), CvType.CV_32F)), dftify);
 					
@@ -183,46 +177,61 @@ public class VibAmpController implements Runnable{
 					Core.dft(dftify, dftify);
 					
 					//mask frequencies
-					Core.split(dftify, layers);
-					Core.magnitude(layers.get(0), layers.get(1), dftMag);
+					Core.split(dftify, imgLayers);
+					Core.magnitude(imgLayers.get(0), imgLayers.get(1), dftMag);
 					Core.log(dftMag, dftMag);
 					Core.normalize(dftMag, dftMag,0, 255, Core.NORM_MINMAX);
-					dftMag.convertTo(dftMag, CvType.CV_8U);
+					dftMag.convertTo(dftMag, CvType.CV_8UC1);
 					Core.inRange(dftMag, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftMag);
 					dftify.setTo(new Scalar(0), dftMag);
 					
 					//mask area
 					dftify.setTo(new Scalar(0), dftHardMask);
 					
-					//amplification and attenuation
-					Core.multiply(dftify, new Scalar(FpAmp * (dftify != matY ? FpAtt : 1)), dftify);
-					
 					//show magnitude spectrum
-					drawImg.accept(dftMag, dftify == matU ? Image3 
-							: dftify == matY ? Image5
-									: Image4);
+					if(dftify == matY)
+						drawImg.accept(dftify, Image3);
+//					drawImg.accept(dftMag, 
+//						  dftify == matU ? Image3 
+//						: dftify == matY ? Image5
+//						: Image4);
 					
 					Core.idft(dftify, dftify);
-					Core.split(dftify, layers);
-					Core.normalize(layers.get(0), dftify, 0, 255, Core.NORM_MINMAX);
+					Core.split(dftify, imgLayers);
+					Core.normalize(imgLayers.get(0), dftify, 0, 255, Core.NORM_MINMAX);
 					
+					//amplification and attenuation
+					Core.multiply(dftify, new Scalar(FpAmp * (dftify == matY ? 1 : FpAtt)), dftify);
+					
+					//sharpen range
+					Core.inRange(dftify, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftify);
+				}	
+				
+				if(overlayOrgionalImage) {
+					Core.split(raw, imgLayers);
+					int i = 0;
+					for(var v : List.of(matY, matU, matV)) {
+						v.convertTo(v, CvType.CV_32F);
+						var m = imgLayers.get(i++);
+						
+						Core.add(m,v,v);
+					}
 				}
 				
 				Core.merge(List.of(matY, matU, matV), src);
-//				Imgproc.cvtColor(src, src, Imgproc.COLOR_YUV2BGR);
-//				Core.split(src, layers);
-//				System.out.println("channels : " + layers.size());
+				
+				if(convertToRGB)
+					Imgproc.cvtColor(src, src, Imgproc.COLOR_YUV2BGR);
+				
 				drawImg.accept(src, Image2);
-//				drawImg.accept(matU, Image3);
-//				drawImg.accept(matV, Image4);
 			}
 		}
 	}
 	
 	private Mat makeMask(Size size) {
 		//limits
-		Mat mask;
-		Scalar fillVal;
+		final Mat mask;
+		final Scalar fillVal;
 		
 		if(invertDFTMask) {
 			mask = Mat.ones(size, CvType.CV_8U);
@@ -252,6 +261,7 @@ public class VibAmpController implements Runnable{
 			cen= new Point(w2, h2);//center point
 		
 		//little overlap. ocv handles that
+		//probably overkill, bench marked, no conclusive results. sometimes went faster, sometimes worse.
 		try(ExecutorService service = Executors.newVirtualThreadPerTaskExecutor()){
 			//each quadrant has upper and lower fill area
 			service.execute(() -> Imgproc.fillPoly(mask, List.of(new MatOfPoint(cen, n, ne)), fillVal)); //1 up
@@ -301,7 +311,12 @@ public class VibAmpController implements Runnable{
 			capture.open(text);
 		}
 
-		workThread.interrupt(); //stop capture should take care of this but just in case.
+		try {
+			workThread.interrupt(); //stop capture should take care of this but just in case.
+			workThread.join(200L);
+		} catch (InterruptedException e) {
+			
+		}
 		workThread = new Thread(this);//let interrupt clean it-slef up. go gc go
 	   	workThread.start();
     }
@@ -359,8 +374,6 @@ public class VibAmpController implements Runnable{
         
         capture = new VideoCapture();
         capture.release();
-        
-    	setHz(30);
     	
     	DFTMask_choiceBox.itemsProperty().set(FXCollections.observableArrayList("N", "S", "E", "W", "NE", "NW", "SE", "SW", "circle", "square"));
     	DFTMask_choiceBox.onActionProperty().addListener((ob,o,n) -> onDFTMask_choiceBox_change());
@@ -379,39 +392,32 @@ public class VibAmpController implements Runnable{
     	    });
     	
     	targetHzRaw_spinner.valueProperty().addListener((observable, oldValue, newValue) -> {
-            setHz(newValue);
+    		PyrLayers = newValue;
         });
     	targetHzRaw_spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
-    			1,						//min
-    			Integer.MAX_VALUE));	//max
+    			0,						//min
+    			Integer.MAX_VALUE,
+    			PyrLayers));	//max
     	
-    	targetHzScaler.valueProperty().addListener((observable, oldValue, newValue) -> {
-           effHz = newValue.floatValue() * getHz();
-           updateEffectiveHz();
-        });
+    	FpAmplification_slider.valueProperty().addListener((obs, newVal, oldVal) -> onFpAmpChange());
+    		FpAmplification_slider.setValue(FpAmp * 100);
+    	FpAmplification_spinner.valueProperty().addListener((pbs, newVal, oldVal) -> onFpAmpChange());
+    	FpAmplification_spinner.setValueFactory(new SpinnerValueFactory.DoubleSpinnerValueFactory(
+    			0,						//min
+    			Integer.MAX_VALUE,
+    			FpAmp));
     	
-    	FpAmplification_slider.setValue(50);
-    	FpAmplification_spinner.getValueFactory().setValue(FpAmp);
-    	
-    	FpAttenuation_slider.setValue(50);
-    	FpAttenuation_spinner.getValueFactory().setValue(FpAtt);
+    	FpAttenuation_slider.valueProperty().addListener((obs, newVal, oldVal) -> onFpAttChange());
+    		FpAttenuation_slider.setValue(FpAtt * 100);
+    	FpAttenuation_spinner.valueProperty().addListener((pbs, newVal, oldVal) -> onFpAttChange());
+    	FpAttenuation_spinner.setValueFactory(new SpinnerValueFactory.DoubleSpinnerValueFactory(
+    			0,						//min
+    			Integer.MAX_VALUE,
+    			FpAtt));
     	
     	source_status_circle.setFill(Color.ORANGE);
-    }
-    
-    public int getHz() {
-    	return targetHz;
-    }
-    
-    private void updateEffectiveHz() {
-    	o_effectiveHz_text.setText(effHz + "");
-    }
-    
-    public float setHz(int targetHz) {
-    	this.targetHz = targetHz;
-    	updateEffectiveHz();
     	
-    	return getHz();
+    	startCapture();
     }
     
     @FXML
@@ -436,8 +442,8 @@ public class VibAmpController implements Runnable{
     }
     
     @FXML
-    private void toggleNormalizeDFT() {
-    	normalizeDFT = !normalizeDFT; 
+    private void toggleRGBReversion() {
+    	convertToRGB = !convertToRGB; 
     }
     
     @FXML 
@@ -448,9 +454,6 @@ public class VibAmpController implements Runnable{
     		maskParamNormals[idx] = normal;
     	}else switch(idx - maskParamNormals.length) {
     		case 0 -> {//circle
-    				//cannot make a proper circle without calculating form actual aspect ratio. assuming is 1:1
-    				double r = Math.sqrt(2) / 2; //ratio
-    				
     				for(int i = 0; i < maskParamNormals.length; i++) maskParamNormals[i]= normal;
     				
     				for(var i : new int[] {DFTMask_NE,DFTMask_NW,DFTMask_SE,DFTMask_SW})
@@ -481,17 +484,20 @@ public class VibAmpController implements Runnable{
     @FXML
     private void onFpAmpChange() {
     	FpAmp = FpAmplification_slider.getValue() / 100;
-    	FpAmp -= .5f;
     	FpAmp *= FpAmplification_spinner.valueProperty().getValue();
-    	o_FpAmp_text.setText(FpAmp + "");
+    	o_FpAmp_text.setText(String.format("%.3f", FpAmp));	
     }
     
     @FXML
     private void onFpAttChange() {
     	FpAtt = FpAttenuation_slider.getValue() / 100;
-    	FpAtt -= .5f;
     	FpAtt *= FpAttenuation_spinner.valueProperty().getValue();
-    	o_FpAtt_text.setText(FpAtt + "");
+    	o_FpAtt_text.setText(String.format("%.3f", FpAtt));
+    }
+    
+    @FXML
+    private void toggleOverlayOrgionalImage() {
+    	overlayOrgionalImage = !overlayOrgionalImage;
     }
     
     @Override public void run() {
