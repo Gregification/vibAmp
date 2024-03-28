@@ -188,9 +188,11 @@ public class VibAmpController implements Runnable{
 					//mask area
 					dftify.setTo(new Scalar(0), dftHardMask);
 					
-					//show magnitude spectrum
-					if(dftify == matY)
-						drawImg.accept(dftify, Image3);
+					//show spectrum
+					if(dftify == matY) {
+						dftMag.setTo(new Scalar(0), dftHardMask);
+						drawImg.accept(dftMag, Image3);
+					}
 //					drawImg.accept(dftMag, 
 //						  dftify == matU ? Image3 
 //						: dftify == matY ? Image5
