@@ -114,13 +114,11 @@ public class VibAmpController implements Runnable{
 		Mat 
 			raw 		= new Mat(),
 			src			= new Mat(),
-			matY		,
-			matU		,
-			matV		,
 			dftMag		= new Mat(),	//magnitude
 			dftHardMask = null;
 		
-		List<Mat> imgLayers = new ArrayList<>();
+		ArrayList<ArrayList<Mat>> pyrLayers = new ArrayList<>(PyrLayers);
+		List<Mat> matBuffer = new ArrayList<>(3);
 		
 		//get capture dimensions
 		capture.read(raw);
@@ -143,9 +141,19 @@ public class VibAmpController implements Runnable{
 			
 			//blurring using gaussian pyramids
 			int p = PyrLayers;
-			for(int i = 0; i < p; i++)
-				Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
+			if(pyrLayers.size() != p) {
+				for(int i = pyrLayers.size(); i < p; i++)
+					pyrLayers.addLast(new ArrayList<Mat>(3));
+				for(int i = pyrLayers.size(); i > p; i--)
+					pyrLayers.removeLast();
+			}
+			
+			for(int i = 0; i < p; i++) {
+				pyrLayers.get(i).add(src);
 				
+				Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
+			}
+					
 			for(int i = 0; i < p; i++)
 				Imgproc.pyrUp(src, src, new Size( src.cols()*2, src.rows()*2));
 			
@@ -155,18 +163,21 @@ public class VibAmpController implements Runnable{
 					Core.BORDER_CONSTANT,
 					Scalar.all(0));
 			
-			Core.split(src, imgLayers);
-			matY = imgLayers.get(0);
-			matU = imgLayers.get(1);
-			matV = imgLayers.get(2);
+			//update mask
+			if(maskChanged || dftHardMask == null || !dftHardMask.size().equals(src.size())) {
+				dftHardMask = makeMask(src.size());
+				maskChanged = false;
+			}
 			
-			//DFT and masks
-			{
-				//update mask
-				if(maskChanged || dftHardMask == null || !dftHardMask.size().equals(src.size())) {
-					dftHardMask = makeMask(src.size());
-					maskChanged = false;
-				}
+			//DFT and masks for each layer
+			for(int L = 0; L < pyrLayers.size(); L++) {
+				var out = pyrLayers.get(L);
+				Core.split(src, out);
+				
+				Mat 
+					matY = out.get(0),
+					matU = out.get(1),
+					matV = out.get(2);
 				
 				//DFT for all layers.
 				for(Mat dftify : List.of(matY, matU, matV)) {					
@@ -177,8 +188,8 @@ public class VibAmpController implements Runnable{
 					Core.dft(dftify, dftify);
 					
 					//mask frequencies
-					Core.split(dftify, imgLayers);
-					Core.magnitude(imgLayers.get(0), imgLayers.get(1), dftMag);
+					Core.split(dftify, matBuffer);
+					Core.magnitude(matBuffer.get(0), matBuffer.get(1), dftMag);
 					Core.log(dftMag, dftMag);
 					Core.normalize(dftMag, dftMag,0, 255, Core.NORM_MINMAX);
 					dftMag.convertTo(dftMag, CvType.CV_8UC1);
@@ -188,8 +199,8 @@ public class VibAmpController implements Runnable{
 					//mask area
 					dftify.setTo(new Scalar(0), dftHardMask);
 					
-					//show spectrum
-					if(dftify == matY) {
+					//show spectrum of dft full scale image
+					if(L == 0 && dftify == matY) {
 						dftMag.setTo(new Scalar(0), dftHardMask);
 						drawImg.accept(dftMag, Image3);
 					}
@@ -199,37 +210,46 @@ public class VibAmpController implements Runnable{
 //						: Image4);
 					
 					Core.idft(dftify, dftify);
-					Core.split(dftify, imgLayers);
-					Core.normalize(imgLayers.get(0), dftify, 0, 255, Core.NORM_MINMAX);
-					
+					Core.split(dftify, matBuffer);
+					Core.normalize(matBuffer.get(0), dftify, 0, 255, Core.NORM_MINMAX);
 					//amplification and attenuation
 					Core.multiply(dftify, new Scalar(FpAmp * (dftify == matY ? 1 : FpAtt)), dftify);
 					
 					//sharpen range
 					Core.inRange(dftify, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftify);
+					
+					//show spectrum of idft full scale image
+					if(L == 0 && dftify == matY)
+						drawImg.accept(dftify, Image4);
 				}	
 				
-				if(overlayOrgionalImage) {
-					Core.split(raw, imgLayers);
-					int i = 0;
-					for(var v : List.of(matY, matU, matV)) {
-						v.convertTo(v, CvType.CV_32F);
-						var m = imgLayers.get(i++);
-						
-						Core.add(m,v,v);
-					}
-				}
-				
-				Core.merge(List.of(matY, matU, matV), src);
-				
-				if(convertToRGB)
-					Imgproc.cvtColor(src, src, Imgproc.COLOR_YUV2BGR);
-				
-				drawImg.accept(src, Image2);
 			}
+			
+			if(overlayOrgionalImage) {
+				Core.split(raw, matBuffer);
+				int i = 0;
+				for(var v : pyrLayers.get(0)) {
+					v.convertTo(v, CvType.CV_32F);
+					var m = matBuffer.get(i++);
+					
+					Core.add(m,v,v);
+				}
+			}
+			
+			Core.merge(pyrLayers.get(0), src);
+			
+			if(convertToRGB)
+				Imgproc.cvtColor(src, src, Imgproc.COLOR_YUV2BGR);
+			
+			drawImg.accept(src, Image2);
 		}
 	}
 	
+	/**
+	 * makes a geometric mask
+	 * @param size - width&height of screen
+	 * @return a mat of the mask  
+	 */
 	private Mat makeMask(Size size) {
 		//limits
 		final Mat mask;
@@ -397,7 +417,7 @@ public class VibAmpController implements Runnable{
     		PyrLayers = newValue;
         });
     	targetHzRaw_spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
-    			0,						//min
+    			1,						//min
     			Integer.MAX_VALUE,
     			PyrLayers));	//max
     	
