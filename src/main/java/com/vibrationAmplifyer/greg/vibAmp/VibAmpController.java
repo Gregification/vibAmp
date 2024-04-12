@@ -43,7 +43,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 
-public class VibAmpController implements Runnable{
+public class VibAmpController implements Runnable {
 	/** layer count of gussian pyramid */
 	volatile int PyrLayers = 3;
 	
@@ -149,7 +149,7 @@ public class VibAmpController implements Runnable{
 			}
 			
 			for(int i = 0; i < p; i++) {
-				pyrLayers.get(i).add(src);
+				pyrLayers.get(i).add(0, src);
 				
 				Imgproc.pyrDown(src, src, new Size( src.cols()/2, src.rows()/2));
 			}
@@ -172,7 +172,7 @@ public class VibAmpController implements Runnable{
 			//DFT and masks for each layer
 			for(int L = 0; L < pyrLayers.size(); L++) {
 				var out = pyrLayers.get(L);
-				Core.split(src, out);
+				Core.split(out.get(0), out);//splits pyramid layer
 				
 				Mat 
 					matY = out.get(0),
@@ -200,14 +200,10 @@ public class VibAmpController implements Runnable{
 					dftify.setTo(new Scalar(0), dftHardMask);
 					
 					//show spectrum of dft full scale image
-					if(L == 0 && dftify == matY) {
+					if(L == pyrLayers.size()-1 && dftify == matY) {
 						dftMag.setTo(new Scalar(0), dftHardMask);
 						drawImg.accept(dftMag, Image3);
 					}
-//					drawImg.accept(dftMag, 
-//						  dftify == matU ? Image3 
-//						: dftify == matY ? Image5
-//						: Image4);
 					
 					Core.idft(dftify, dftify);
 					Core.split(dftify, matBuffer);
@@ -219,7 +215,7 @@ public class VibAmpController implements Runnable{
 					Core.inRange(dftify, new Scalar(DFTMask_min * 255), new Scalar(DFTMask_max * 255), dftify);
 					
 					//show spectrum of idft full scale image
-					if(L == 0 && dftify == matY)
+					if(L == pyrLayers.size()-1 && dftify == matY)
 						drawImg.accept(dftify, Image4);
 				}	
 				
@@ -308,7 +304,7 @@ public class VibAmpController implements Runnable{
     }
     
     @FXML
-    private void quit() {
+    public void quit() {
     	stopCapture();
     	
     	System.exit(0);
@@ -392,8 +388,9 @@ public class VibAmpController implements Runnable{
      * init gui listeners and such
      */
     public void initialize() {
+    	App.onClose = () -> {quit();};
+    	
     	//prepare openCV
-        
         capture = new VideoCapture();
         capture.release();
     	

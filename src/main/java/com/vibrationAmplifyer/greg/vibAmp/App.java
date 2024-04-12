@@ -14,11 +14,17 @@ import javafx.stage.Stage;
  * vibAmp JavaFX root
  */
 public class App extends Application {
-    private static Scene scene;
-
+	public static Scene scene;
+	public static Runnable onClose = () -> {};
+	
     @Override
     public void start(Stage stage) throws IOException {
-        scene = new Scene(loadFXML("primary"), 1080, 780);
+    	FXMLLoader fxmlLoader = new FXMLLoader(App.class.getResource("primary.fxml"));
+        scene = new Scene(fxmlLoader.load(), 1080, 780);
+        
+        stage.centerOnScreen();
+        stage.setOnCloseRequest(e -> onClose.run());
+        
         stage.setScene(scene);
         stage.show();
     }
